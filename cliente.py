@@ -61,7 +61,7 @@ class MainView(tk.Tk):
 
             # habilita a area de chat para editar
             self.chat_area.config(state='normal')
-            self.chat_area.insert(tk.END, f"Servidor: {response.decode()} \n") #edita
+            self.chat_area.insert(tk.END, f"{response.decode()} \n") #edita
             self.chat_area.config(state='disabled')  # Desabilita para edição
             self.chat_area.yview(tk.END)  # Rola para o fim
 

@@ -1,35 +1,8 @@
 from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
-
-# Worker para gerenciar a comunicação com o cliente
-# metodo de falar com o cliente
-def falarComCliente(cliente_socket, endereco_cliente):
-    print(f'Conexão estabelecida com o {endereco_cliente}')
-
-    while True:
-        # Envia mensagem para o Cliente
-        response = input("")
-        cliente_socket.sendall(response.encode())
-
-# metodo de receber mensagens do cliente
-def escutarCliente(cliente_socket, endereco_cliente):
-    print(f'escutando o cliente: {endereco_cliente}')
-
-    while True:
-        # Recebe mensagem do cliente
-        mensagem = cliente_socket.recv(1500)
-
-        # Se a mensagem nao chegar, encerra a conexao
-        if not mensagem or mensagem.decode() == "encerrar chat":
-            print("Nenhuma mensagem recebida, fechando conexao")
-            #fecha a conexao com o cliente
-            cliente_socket.close()
-
-        # Receber mensagem do cliente
-        print(f'Cliente:{mensagem.decode()}.')
-
-# metodo para que o servidor aceite multiplos clientes
-
+from threading import Thread
+import tkinter as tk
+from tkinter import scrolledtext
 
 # configuracao do servidor
 # cria o socket servidor
@@ -40,11 +13,44 @@ server_socket.bind(('127.0.0.1', 8000))
 server_socket.listen()
 print('Aguardando por novas requisiçõse na porta 8000')
 
-# aceita a conexão
-while True:
-    cliente_socket, endereco_cliente = server_socket.accept()
+clientes = {}
+count = 0
 
-    # criando thread de envio para o servidor
-    Thread(target=falarComCliente, args=(cliente_socket, endereco_cliente)).start()
-    # criando thread de recebimento para o servidor
-    Thread(target=escutarCliente, args=(cliente_socket, endereco_cliente)).start()
+#interface
+def connection_request():
+    global count
+    # aceita a conexão
+    while True:
+        cliente_socket, endereco_cliente = server_socket.accept()
+        print(f'conectado com {endereco_cliente}')
+        
+        clientes[cliente_socket] = (endereco_cliente, count)
+
+        # criando thread de envio para o servidor
+        Thread(target=send_message, args=(cliente_socket)).start()
+        # criando thread de recebimento para o servidor
+        Thread(target=escutarCliente, args=(cliente_socket, endereco_cliente)).start()
+
+# metodo de falar com o cliente
+def send_message(cliente_socket):
+    while True:
+        # Envia mensagem para o Cliente
+        response = input("")
+        for i in clientes:
+            cliente_socket.sendall(response.encode())
+
+# metodo de receber mensagens do cliente
+def escutarCliente(cliente_socket, endereco_cliente):
+    print(f'escutando o cliente: {endereco_cliente}')
+
+    while True:
+        # Recebe mensagem do cliente
+        mensagem = cliente_socket.recv(1500)
+        mensagemGlobal = (f'{endereco_cliente}:{mensagem.decode()}.')
+
+        for i in clientes:
+            if i != cliente_socket:
+                i.sendall(mensagemGlobal.encode())
+            
+
+connection_request()
