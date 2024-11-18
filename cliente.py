@@ -10,7 +10,7 @@ class MainView(tk.Tk):
         super().__init__()
 
         #tamanho e titulo
-        self.title("Chat Interface cliente")
+        self.title("Chat Interface Cliente")
         self.geometry("400x500")
 
         # Área de mensagens (ScrolledText)
@@ -28,9 +28,9 @@ class MainView(tk.Tk):
         # configuracao da conexao com o servidor
         # cria o socket
         self.socket_cliente = socket(AF_INET, SOCK_STREAM)
-        print(f'pronto para conectar ao servidor na porta 8000')
         # conecta ao servidor
         self.socket_cliente.connect(('127.0.0.1', 8000))
+        print("conectado ao servidor")
 
         # criando thread de envio para cliente
         Thread(target=self.send_message).start()
