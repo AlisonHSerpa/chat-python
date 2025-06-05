@@ -8,7 +8,7 @@ class ChatClient(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Chat Cliente")
-        self.geometry("400x500")
+        self.geometry("400x600")
         self.username = "Você"  # Nome padrão
         self.message_queue = Queue()  # Fila para comunicação entre threads
         self._setup_ui()
@@ -19,13 +19,38 @@ class ChatClient(tk.Tk):
 
     # cuida do visual
     def _setup_ui(self):
-        self.chat_area = scrolledtext.ScrolledText(self, wrap=tk.WORD, state='disabled')
-        self.chat_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-
+        # frame principal
+        main_frame = tk.Frame(self)
+        main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        
+        # Label do nome de usuário (com estilo melhorado)
+        self.name_label = tk.Label(
+            main_frame, 
+            text=f'Usuário: {self.username}',
+            font=('Arial', 10, 'bold'),
+            bg='#f0f0f0',
+            padx=5,
+            pady=2
+        )
+        self.name_label.pack(fill=tk.X, pady=(0, 5))
+        
+        # Área de chat com scroll
+        self.chat_area = scrolledtext.ScrolledText(
+            main_frame,
+            wrap=tk.WORD,
+            state='disabled',
+            font=('Arial', 10),
+            padx=5,
+            pady=5
+        )
+        self.chat_area.pack(fill=tk.BOTH, expand=True)
+        
+        # campo de mensagem
         self.message_entry = tk.Text(self, height=3)
         self.message_entry.pack(padx=10, pady=5, fill=tk.X)
         self.message_entry.bind("<Return>", lambda e: self._send_message())
 
+        # caixa de botoes
         button_frame = tk.Frame(self)
         button_frame.pack(pady=5)
         
@@ -41,6 +66,12 @@ class ChatClient(tk.Tk):
         if new_username and new_username.strip():
             self.username = new_username.strip()
             self._show_message(f"Você agora é conhecido como: {self.username}")
+            
+            # Atualiza o label do nome
+            self.name_label.config(text=f'Usuário: {self.username}') 
+
+            switchName = f'/change/name/{new_username}'
+            self.socket_cliente.sendall(switchName.encode())
 
     # cuida da conexao
     def _setup_socket(self):
@@ -60,10 +91,12 @@ class ChatClient(tk.Tk):
 
         try:
             self.socket_cliente.sendall(message.encode())
-            self._show_message(message)
+            if "/" not in message:
+                self._show_message(message)
             self.message_entry.delete("1.0", tk.END)
         except Exception as e:
             self._show_message(f"Falha ao enviar: {e}")
+
 
     # cuida das entradas de mensagem
     def _listen_server(self):
