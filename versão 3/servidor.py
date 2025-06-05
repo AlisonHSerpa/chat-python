@@ -4,7 +4,7 @@ import sys
 
 # Configuração do servidor
 server_socket = socket(AF_INET, SOCK_STREAM)
-server_socket.bind(('172.29.9.195', 8000))
+server_socket.bind(('0.0.0.0', 8000))
 server_socket.listen()
 print('Aguardando por novas conexões na porta 8000')
 
