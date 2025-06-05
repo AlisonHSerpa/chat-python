@@ -1,3 +1,4 @@
+import random
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog
 from socket import socket, AF_INET, SOCK_STREAM
@@ -9,12 +10,12 @@ class ChatClient(tk.Tk):
         super().__init__()
         self.title("Chat Cliente")
         self.geometry("400x600")
-        self.username = "Você"  # Nome padrão
+        self.username = self._generate_random_name()  # Nome aleatorio
         self.message_queue = Queue()  # Fila para comunicação entre threads
         self._setup_ui()
         self._setup_socket()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-        self._ask_username()  # Pergunta o nome ao iniciar
+
         self.after(100, self._process_messages)  # Verifica mensagens periodicamente
 
     # cuida do visual
@@ -60,6 +61,26 @@ class ChatClient(tk.Tk):
         self.name_button = tk.Button(button_frame, text="Mudar Nome", command=self._ask_username)
         self.name_button.pack(side=tk.LEFT, padx=5)
 
+        self.command_button = tk.Button(button_frame, text="lista de comandos", command=self._command_list)
+        self.command_button.pack(side=tk.LEFT, padx=6)
+
+    # monstrar aba com lista de comandos
+    def _command_list(self):
+        help_window = tk.Tk()
+        help_window.title("Command List")
+        help_window.geometry("500x100")
+
+        text = tk.Text(help_window, height=8)
+        text.pack(padx=10, pady=10, expand=True,fill=tk.BOTH)
+
+        text.insert(
+            index='1.0', 
+            chars= 'Mostrar usuários onlines: /list/users/ \n' 
+            'Mandar mensagem privada: /whisper/<username>/<mensagem> \n' 
+            'Mudar o nome: /change/name/<novo_nome>'
+        )
+
+
     # Pede o nome do usuário
     def _ask_username(self):
         new_username = simpledialog.askstring("Nome", "Escolha seu nome:", parent=self)
@@ -68,10 +89,31 @@ class ChatClient(tk.Tk):
             self._show_message(f"Você agora é conhecido como: {self.username}")
             
             # Atualiza o label do nome
-            self.name_label.config(text=f'Usuário: {self.username}') 
+            self._set_username(new_username)
 
-            switchName = f'/change/name/{new_username}'
-            self.socket_cliente.sendall(switchName.encode())
+    def _set_username(self, username):
+        self.name_label.config(text=f'Usuário: {username}')
+
+        switchName = f'/change/name/{username}'
+        self.socket_cliente.sendall(switchName.encode())
+
+    def _generate_random_name(self):
+       random_names = [
+        "Luffy", "Brook", "Rocks", "Kuma", "Zoro", "Nami", "Robin", "Franky",
+        "Sanji", "Usopp", "Chopper", "Jinbe", "Ace", "Sabo", "Gol D. Roger",
+        "Shanks", "Buggy", "Mihawk", "Boa Hancock", "Bartholomew Kuma", 
+        "Trafalgar Law", "Eustass Kid", "Killer", "Kaido", "Big Mom", 
+        "Blackbeard", "Whitebeard", "Marco", "Izo", "Yamato", "Oden", 
+        "Enel", "Crocodile", "Doflamingo", "Magellan", "Ivankov", 
+        "Bon Clay", "Smoker", "Tashigi", "Fujitora", "Kizaru", "Aokiji", 
+        "Akainu", "Garp", "Sengoku", "Koala", "Rebecca", "Shirahoshi", 
+        "Vivi", "Carrot", "Pedro", "Kin'emon", "Denjiro", "Raizo", 
+        "Kanjuro", "Monet", "Caesar Clown", "Vergo", "Corazon", "Pell", 
+        "Wapol", "Hody Jones", "Arlong", "Bellamy", "Bartolomeo", 
+        "Cavendish", "Basil Hawkins", "X Drake", "Scratchmen Apoo",
+        "Urouge", "Capone Bege", "Shiki", "Zephyr", "Pudding", "Katakuri"
+        ]
+       return random.choice(random_names)
 
     # cuida da conexao
     def _setup_socket(self):
