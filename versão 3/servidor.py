@@ -103,6 +103,7 @@ def _list_online_users(client_socket):
     message = f"usuarios online:\n-{formatted_users}"
     client_socket.sendall(message.encode())
 
+# envia mensagens privadas no geral
 def _private_send(sender_socket, client_address, target_username, message_body):
     # Verifica se o remetente tem nome cadastrado
     sender_username = socket_to_username.get(client_address)
@@ -158,6 +159,8 @@ def _connection_request():
             _send_notification(f'{endereco_cliente} entrou no chat')
             
             Thread(target=_transmit_message, args=(cliente_socket, endereco_cliente)).start()
+            # colocar thread para enviar usuarios
+
     except KeyboardInterrupt:
         print("\nDesligando servidor...")
         for cliente in clientes:

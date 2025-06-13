@@ -14,6 +14,7 @@ class ChatClient(tk.Tk):
         self.message_queue = Queue()  # Fila para comunicação entre threads
         self._setup_ui()
         self._setup_socket()
+        self._set_username(self.username)
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.after(100, self._process_messages)  # Verifica mensagens periodicamente
@@ -121,6 +122,9 @@ class ChatClient(tk.Tk):
             self.socket_cliente = socket(AF_INET, SOCK_STREAM)
             self.socket_cliente.connect(('127.0.0.1', 8000))
             Thread(target=self._listen_server, daemon=True).start()
+
+            # adicionar outra thread para listar usuarios
+            
             self._show_message("Conectado ao servidor.")
         except Exception as e:
             self._show_message(f"Falha na conexão: {e}")
