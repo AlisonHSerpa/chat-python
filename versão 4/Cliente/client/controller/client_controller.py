@@ -19,51 +19,48 @@ class ClientController:
             self.view.show_error(f"Falha na conexão: {connection_result}")
             return
         
-        # Configura o nome inicial
-        self.change_username(self.model.username)
-        
-        # Inicia a escuta do servidor
+        # Configura o listener para mensagens do servidor
         self.model.start_listening(self.handle_server_message)
         
         # Inicia o processamento de mensagens
         self.view.after(100, self.process_messages)
 
-    def change_username(self, new_username=None):
-        if new_username is None:
-            new_username = self.view.get_message_input()
-            if not new_username:
-                return
-        
-        self.model.username = new_username
-        self.model.send_message(f'/change/name/{new_username}')
-        self.view.update_username_display(new_username)
-
     def send_message(self):
+        """Envia mensagem para o servidor"""
         message = self.view.get_message_input()
         if not message:
             return
         
+        # Mensagem normal
         full_message = f"{self.model.username}: {message}"
         result = self.model.send_message(full_message)
         
         if result is not True:
             self.view.show_error(result)
         else:
-            if "/" not in message:  # Não exibe mensagens de comando
-                self.view.display_message(full_message)
+            self.view.display_message(full_message)
             self.view.clear_message_input()
 
     def handle_server_message(self, message):
+        """Processa mensagens recebidas do servidor"""
         self.model.message_queue.put(message)
 
     def process_messages(self):
+        """Processa mensagens na fila e atualiza a view"""
         while not self.model.message_queue.empty():
             message = self.model.message_queue.get()
-            self.view.display_message(message)
+
+            if (message != "PING"):
+                # Mensagem normal do chat
+                self.view.display_message(message)
+        
+        # Agenda o próximo processamento
         self.view.after(100, self.process_messages)
 
     def disconnect(self):
+        """Desconecta do servidor"""
         self.model.disconnect()
 
     def run(self):
+        """Inicia a aplicação"""
         self.view.mainloop()

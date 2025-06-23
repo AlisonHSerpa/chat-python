@@ -8,101 +8,91 @@ class ServerController:
     def send_notification(self, notification):
         """Envia notificação para todos os clientes"""
         print(notification)
-        for cliente in self.model.clientes[:]:
+        for client in self.model.clients[:]:
             try:
-                cliente.sendall(notification.encode())
+                client.socket.sendall(notification.encode())
             except (ConnectionResetError, BrokenPipeError):
                 # Remove cliente que não responde
-                self.model.clientes.remove(cliente)
-                print(f"Cliente desconectado: {cliente.getpeername()}")
+                self.model.remove_client(client.socket)
+                print(f"Cliente desconectado: {client.username}")
     
-    def transmit_message(self, cliente_socket, endereco_cliente):
+    def handle_new_connection(self, client_socket, client_address):
+        """Processa a conexão inicial do cliente"""
+        try:
+            # Recebe o username inicial
+            initial_data = client_socket.recv(1024).decode().strip()
+            
+            if initial_data.startswith("/setusername"):
+                username = initial_data.split()[1]
+                client = self.model.add_client(client_socket, client_address, username)
+                self.broadcast_message(f"{username} entrou no chat. ", self.model.server_socket)
+                self.broadcast_message(f"Bem-vindo, {username}!", self.model.server_socket)
+                return client
+            else:
+                client_socket.close()
+                return None
+        except Exception as e:
+            print(f"Erro ao configurar novo cliente: {e}")
+            client_socket.close()
+            return None
+    
+    def transmit_message(self, client_socket):
         """Gerencia a transmissão de mensagens de um cliente"""
-        print(f'Escutando o cliente: {endereco_cliente}')
+        client = self.model.get_client_by_socket(client_socket)
+        if not client:
+            return
+        
+        print(f'Escutando o cliente: {client.username}')
         
         try:
             while True:
-                mensagem = cliente_socket.recv(1500)
+                mensagem = client_socket.recv(1500)
                 if not mensagem:  # Cliente desconectou normalmente
                     break
                 
-                rawMensagem = mensagem.decode()
-                if "/" in rawMensagem:
-                    self.process_command(rawMensagem, endereco_cliente, cliente_socket)
-                    continue
-                
-                print(rawMensagem)
-                self.broadcast_message(rawMensagem, cliente_socket)
+                raw_message = mensagem.decode().strip()
+                print(raw_message)
+                self.broadcast_message(raw_message, client_socket)
         
         except ConnectionResetError:
-            print(f"Conexão resetada pelo cliente: {endereco_cliente} - {self.model.get_username(endereco_cliente)}")
+            print(f"Conexão resetada pelo cliente: {client.username}")
         except Exception as e:
-            print(f"Erro com cliente {endereco_cliente} - {self.model.get_username(endereco_cliente)}: {e}")
+            print(f"Erro com cliente {client.username}: {e}")
         finally:
-            username = self.model.remove_client(cliente_socket, endereco_cliente)
-            if username:
-                self.send_notification(f"{username} saiu do chat.")
-            cliente_socket.close()
+            removed_client = self.model.remove_client(client_socket)
+            if removed_client:
+                self.send_notification(f"{removed_client.username} saiu do chat.")
+            client_socket.close()
     
     def broadcast_message(self, message, sender_socket=None):
         """Envia mensagem para todos os clientes exceto o remetente"""
-        for cliente in self.model.clientes[:]:
-            if cliente != sender_socket:
+        for client in self.model.clients[:]:
+            if client.socket != sender_socket:
                 try:
-                    cliente.sendall(message.encode())
+                    client.socket.sendall(message.encode())
                 except (ConnectionResetError, BrokenPipeError):
-                    self.model.clientes.remove(cliente)
-                    print(f"Cliente desconectado durante envio: {cliente.getpeername()}")
+                    self.model.remove_client(client.socket)
+                    print(f"Cliente desconectado durante envio: {client.username}")
     
-    def process_command(self, raw_command, client_address, client_socket):
-        """Processa comandos recebidos dos clientes"""
-        try:
-            parts = raw_command.split("/", 3)
-            if len(parts) != 4:
-                raise ValueError("Formato incorreto! Use: /comando/alvo/mensagem")
-            
-            _, command, target, body = parts
-
-            if command.lower() == "change":
-                self.model.map_username(client_address, body)
-                client_socket.sendall("Nome atualizado com sucesso!".encode())
-                
-            elif command.lower() == "whisper":
-                self.send_private_message(client_socket, client_address, target, body)
-            
-            elif command.lower() == "list":
-                self.list_online_users(client_socket)
-            else:
-                raise ValueError("Comando desconhecido")
-                
-        except Exception as e:
-            error_msg = f"Erro: {str(e)}"
-            client_socket.sendall(error_msg.encode())
-    
-    def send_private_message(self, sender_socket, client_address, target_username, message_body):
+    def send_private_message(self, sender, target_username, message_body):
         """Envia mensagem privada entre usuários"""
-        sender_username = self.model.get_username(client_address)
-        if not sender_username:
-            sender_socket.sendall("Você precisa definir um nome primeiro com /name".encode())
-            return
+        recipient = self.model.get_client_by_username(target_username)
         
-        recipient_socket = self.model.get_recipient_socket(target_username)
-        
-        if recipient_socket:
-            msg = f"[Private from {sender_username}]: {message_body}"
+        if recipient:
+            msg = f"[Private from {sender.username}]: {message_body}"
             try:
-                recipient_socket.sendall(msg.encode())
-                sender_socket.sendall(f"[Private for {target_username}]: {message_body} ".encode())
+                recipient.socket.sendall(msg.encode())
+                sender.socket.sendall(f"[Private to {target_username}]: {message_body}".encode())
             except:
-                sender_socket.sendall("Erro ao enviar mensagem privada".encode())
+                sender.socket.sendall("Erro ao enviar mensagem privada".encode())
         else:
-            sender_socket.sendall(f"Usuário '{target_username}' não encontrado ou offline".encode())
+            sender.socket.sendall(f"Usuário '{target_username}' não encontrado ou offline".encode())
     
     def list_online_users(self, client_socket):
         """Envia lista de usuários online para o cliente solicitante"""
         users = self.model.get_online_users()
-        formatted_users = "\n-".join(users) if users else "Nenhum usuário online"
-        message = f"usuarios online:\n-{formatted_users}"
+        formatted_users = "\n- " + "\n- ".join(users) if users else "Nenhum usuário online"
+        message = f"Usuários online:{formatted_users}"
         client_socket.sendall(message.encode())
     
     def server_message_loop(self):
@@ -122,12 +112,10 @@ class ServerController:
         """Aceita novas conexões de clientes"""
         try:
             while True:
-                cliente_socket, endereco_cliente = self.model.server_socket.accept()
-                self.model.add_client(cliente_socket, endereco_cliente)
-                
-                self.send_notification(f'{endereco_cliente} entrou no chat')
-                
-                Thread(target=self.transmit_message, args=(cliente_socket, endereco_cliente)).start()
+                client_socket, client_address = self.model.server_socket.accept()
+                client = self.handle_new_connection(client_socket, client_address)
+                if client:
+                    Thread(target=self.transmit_message, args=(client_socket,)).start()
 
         except KeyboardInterrupt:
             print("\nDesligando servidor...")

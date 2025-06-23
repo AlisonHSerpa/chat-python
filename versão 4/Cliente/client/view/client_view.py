@@ -8,9 +8,10 @@ class ClientView(tk.Tk):
         self.title("Chat Cliente")
         self.geometry("400x600")
         self.protocol("WM_DELETE_WINDOW", self.on_close)
-        self._setup_ui()
+        self._setup_ui(self.controller.model.get_username())
 
-    def _setup_ui(self):
+    def _setup_ui(self, username):
+
         # Frame principal
         main_frame = tk.Frame(self)
         main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
@@ -18,7 +19,7 @@ class ClientView(tk.Tk):
         # Label do nome de usuário
         self.name_label = tk.Label(
             main_frame, 
-            text='Usuário: ',
+            text= f"Usuario : {username}",
             font=('Arial', 10, 'bold'),
             bg='#f0f0f0',
             padx=5,
@@ -48,9 +49,6 @@ class ClientView(tk.Tk):
         
         self.send_button = tk.Button(button_frame, text="Enviar", command=self.controller.send_message)
         self.send_button.pack(side=tk.LEFT, padx=5)
-        
-        self.name_button = tk.Button(button_frame, text="Mudar Nome", command=self.controller.change_username)
-        self.name_button.pack(side=tk.LEFT, padx=5)
 
         self.command_button = tk.Button(button_frame, text="Comandos", command=self.show_commands)
         self.command_button.pack(side=tk.LEFT, padx=6)

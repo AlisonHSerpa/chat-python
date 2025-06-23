@@ -8,6 +8,7 @@ def main():
     
     # Inicia thread para mensagens do servidor
     Thread(target=controller.server_message_loop, daemon=True).start()
+    Thread(target=model.check_connections, daemon=True).start()
     
     # Inicia loop principal de conexões
     controller.connection_request_loop()
