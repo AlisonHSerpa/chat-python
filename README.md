@@ -77,6 +77,9 @@ A interface gráfica será aberta, permitindo que você envie mensagens para os 
 ## 📂 Estrutura do Projeto
 
 ```
+version_3
+├── client.py
+└── server.py
 version_4/
 ├── client/
 │   ├── main.py
