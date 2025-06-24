@@ -77,21 +77,21 @@ A interface gráfica será aberta, permitindo que você envie mensagens para os 
 ## 📂 Estrutura do Projeto
 
 ```
-version_3
+version_3/
 ├── client.py
 └── server.py
 version_4/
 ├── client/
 │   ├── main.py
-│   └── client
-│       ├── controller
+│   └── client/
+│       ├── controller/
 │             ├── __init__.py
 │             ├── client_controller.py
 │             └── message_controller.py
-│       ├── model.py
+│       ├── model/
 │             ├──__init__.py
 │             └── client_model.py
-│       ├── view
+│       ├── view/
 │             ├──__init__.py
 │             ├── client_view.py
 │             └── chat_view.py
@@ -103,7 +103,7 @@ version_4/
        ├── controller
              ├── __init__.py
              ├── server_controller.py
-       ├── model.py
+       ├── model
              ├──__init__.py
              └── server_model.py
        └── __init__.py
