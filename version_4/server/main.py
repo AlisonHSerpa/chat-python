@@ -1,5 +1,5 @@
 from threading import Thread
-from servidor import create_server
+from src import create_server
 
 def main():
     # Cria e configura o servidor
