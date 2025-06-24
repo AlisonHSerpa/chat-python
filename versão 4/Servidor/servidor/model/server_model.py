@@ -3,6 +3,7 @@ from threading import Thread
 import sys
 import time
 from .client_model import ClientModel
+import json
 
 class ServerModel:
     def __init__(self):
@@ -25,11 +26,11 @@ class ServerModel:
                     self.remove_client(client.socket)
             time.sleep(60)  # Verificar a cada minuto
 
-    def add_client(self, client_socket, client_address, username):
+    def add_client(self, client_socket, client_address, username = None):
         """Adiciona um novo cliente à lista"""
-        client = ClientModel(client_socket, username)
+        client = ClientModel(client_socket, client_address, username)
         self.clients.append(client)
-        print(f'Nova conexão de: {client_address} - Usuário: {username}')
+        print(f'Nova conexão de: {client_address}')
         return client
     
     def remove_client(self, client_socket):
@@ -69,3 +70,8 @@ class ServerModel:
         for client in self.clients[:]:
             client.socket.close()
         self.server_socket.close()
+
+    def receive_data_server(self, data):
+        '''decodifica json '''
+        json_data = json.loads(data.decode())
+        return json_data
