@@ -67,9 +67,9 @@ class ClientModel:
 
     def receive_data(self, data):
         ''' decodifica o json'''
-        json_data = json.loads(data.decode())
+        json_data = json.loads(data)
         return json_data
-    
+        
     def mount_message(self, type, destiny, body):
         ''' monta um json mensagem '''
         message = {

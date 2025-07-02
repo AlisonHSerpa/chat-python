@@ -7,6 +7,8 @@ class ClientController:
         self.model = None
         self.view = None
         self.chats = []
+        self.online_users = []
+        self.notification = []
         self.setup_mvc()
 
     def setup_mvc(self):
@@ -34,15 +36,16 @@ class ClientController:
         def listen():
             while self.model.connected:
                 try:
-                    response = self.model.socket.recv(1500)
+                    response = self.model.socket.recv(1500).decode()
                     if not response:
                         break
 
                     try:
-                        mensagem= self.model.receive_data_server(response)
+                        mensagem= self.model.receive_data(response)
                         self.model.message_queue.put(mensagem)
                     except json.JSONDecodeError:
                         print("Erro ao decodificar mensagem")
+                        break
                 except Exception as e:
                     self.view.show_error(f'erro: {e}')
                     break
@@ -51,11 +54,22 @@ class ClientController:
 
         Thread(target=listen, daemon=True).start()
 
-    def create_chat(self, destiny):
+    def process_messages(self):
+        """Processa mensagens na queue que o model RECEBE"""
+        while not self.model.message_queue.empty():
+            message = self.model.message_queue.get()
+            if (message["to"] == self.model.username):
+                if (message["type"] == "message"):
+                    self.notification.append(message)
+                elif (message["type"] == "userlist"):
+                    self.set_online_users(message["body"])
+        # Agenda o próximo processamento
+        self.view.after(100, self.process_messages)
+
+    def create_chat(self, target):
         """Generates a thread for each chat (each chat shares the main handler)."""
         def thread_chat():
-            chat = MessageController(self.model, destiny)
-            self.chats.append(chat)
+            chat = MessageController(self.model, target, self)
             chat.create_view()
 
         # Start the thread (pass the function, don't call it!)
@@ -63,28 +77,18 @@ class ClientController:
         thread.daemon = True  # Optional: Kills thread when main program exits
         thread.start()
 
-    def process_messages(self):
-        """Processa mensagens na queue que o model RECEBE"""
-        while not self.model.message_queue.empty():
-            message = self.model.message_queue.get()
-
-            if (message == "PING"):
-                continue
-            elif (message["type"] == "message"):
-                if (message["to"] == self.model.username):
-                    for chat in self.chats:
-                        if (chat.destiny == message["from"]):
-                            chat.post_message(message["body"])
-                            break
-                    self.notification.append(message)
-        # Agenda o próximo processamento
-        self.view.after(100, self.process_messages)
-
-    # FASE DE TESTE
-    def get_online_users(self):
+    def set_online_users(self, server_users):
         ''' pega a lista de usuarios online do servidor'''
-        users = ["alison", "Arthur"]
-        return users
+        self.online_users = server_users
+        
+        # Notifica a view para atualizar a interface
+        if self.view:
+            self.view.update_online_users(self.online_users)
+
+        return self.online_users
+    
+    def get_online_users(self):
+        return self.online_users
 
     def disconnect(self):
         """Desconecta do servidor"""

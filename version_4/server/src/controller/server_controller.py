@@ -1,6 +1,7 @@
 from threading import Thread
 import sys
 import json
+import time
 
 class ServerController:
     def __init__(self, model):
@@ -9,9 +10,17 @@ class ServerController:
     def handle_new_connection(self, client_socket, client_address):
         """Processa a conexão inicial do cliente"""
         try:
-            self.model.add_client(client_socket, client_address, None)
-            return client_socket
+            # Recebe o handshake de username
+            data = client_socket.recv(1500).decode()
+            mensagem = json.loads(data)
         
+            if not mensagem["type"] == "changeusername":
+                raise ValueError("protocolo invalido, username nao informado")
+                
+            username = mensagem["body"]
+            self.model.add_client(client_socket, client_address, username)
+            print(f"Novo cliente conectado: {username} ({client_address})")
+            return client_socket
         except Exception as e:
             print(f"Erro ao configurar novo cliente: {e}")
             client_socket.close()
@@ -88,7 +97,6 @@ class ServerController:
     
     def handle_message(self, origin, destiny, message):
         """Envia mensagem para o cliente"""
-        print(self.model.clients)  # debug
 
         # procura o objeto cliente de origem
         origin_client = self.model.get_client_by_username(origin)
@@ -113,21 +121,19 @@ class ServerController:
                 client.setusername(username)
                 break
 
-    def list_online_users(self, client_socket):
-        """Envia lista de usuários online para o cliente solicitante"""
-        # cria a lista de nomes de usuários
-        users = [client.username for client in self.model.clients]
-
-        # obtém o objeto cliente correspondente
-        client_obj = self.model.get_client_by_socket(client_socket)
-        username = client_obj.username if client_obj else "unknown"
-
-        # monta a mensagem
-        message = {
-            "type": "userlist",
-            "from": "server",
-            "to": username,
-            "body": users
-        }
-
-        client_socket.sendall(json.dumps(message).encode())
+    def list_online_users(self):
+        while True:
+            users = [client.username for client in self.model.clients]
+            message = {
+                "type": "userlist",
+                "from": "server",
+                "to": "all",
+                "body": users
+            }
+            for client in list(self.model.clients):
+                try:
+                    message["to"] = client.username
+                    client.socket.sendall(json.dumps(message).encode())
+                except Exception:
+                    self.model.clients.remove(client)
+            time.sleep(5)

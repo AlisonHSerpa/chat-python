@@ -15,18 +15,8 @@ class ServerModel:
         self.server_socket.bind((host, port))
         self.server_socket.listen()
         print(f'Aguardando por novas conexões na porta {port}')
-    
-    def check_connections(self):
-        while True:
-            for client in self.clients[:]:
-                try:
-                    client.socket.sendall(b'PING')
-                    # Esperar por PONG dentro do timeout
-                except:
-                    self.remove_client(client.socket)
-            time.sleep(60)  # Verificar a cada minuto
 
-    def add_client(self, client_socket, client_address, username = None):
+    def add_client(self, client_socket, client_address, username):
         """Adiciona um novo cliente à lista"""
         client = ClientModel(client_socket, client_address, username)
         self.clients.append(client)
