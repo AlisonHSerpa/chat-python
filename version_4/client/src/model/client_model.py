@@ -3,23 +3,37 @@ from socket import socket, AF_INET, SOCK_STREAM
 from threading import Thread
 from queue import Queue
 import json
+from ..service import WriterService 
+import os
+from ..view import ask_username
 
 class ClientModel:
     def __init__(self):
-        self.username = self._generate_random_name()
+        self.writer = WriterService()
+        self.username = None
+        self.askName()
         self.socket = None
         self.message_queue = Queue()
         self.connected = False
         self.server_host = None
         self.server_port = None
 
-    def _generate_random_name(self):
-        ''' gera um nome de one piece aleatorio'''
-        random_names = [
-            "Luffy", "Zoro", "Nami", "Sanji", "Chopper", 
-            "Robin", "Franky", "Brook", "Jinbe", "Shanks"
-        ]
-        return random.choice(random_names)
+    def askName(self):
+        ''' pergunta o nome do usuario caso nao exista um arquivo usuario'''
+        diretorio = "./user.txt"
+        if os.path.exists(diretorio):
+            self.username = self.writer.read_file(diretorio)
+        else:
+            self.username = ask_username()  # Chama a janela gráfica
+        
+            if not self.username:
+                print("Nenhum nome foi digitado.")
+                return
+
+            try:         
+                self.writer.write_file(diretorio, self.username)
+            except Exception as e:
+                print(f"erro ao criar um usuario: {e}")
 
     def connect_to_server(self, host='127.0.0.1', port=8000):
         ''' faz a conexao com o servidor '''

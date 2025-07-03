@@ -8,11 +8,10 @@ class ClientController:
         self.view = None
         self.chats = []
         self.online_users = []
-        self.notification = []
         self.setup_mvc()
 
     def setup_mvc(self):
-        ''' inicia toda a plicacao criando cliente, interface e conexoes'''
+        ''' inicia toda a aplicacao criando cliente, interface e conexoes'''
         from ..model import ClientModel
         from ..view import ClientView
         
@@ -60,7 +59,8 @@ class ClientController:
             message = self.model.message_queue.get()
             if (message["to"] == self.model.username):
                 if (message["type"] == "message"):
-                    self.notification.append(message)
+                    self.model.writer.notification.put(message)
+                    self.model.writer.read_notification()
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
         # Agenda o próximo processamento

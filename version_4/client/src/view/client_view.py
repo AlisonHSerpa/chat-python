@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import scrolledtext, messagebox, simpledialog
-from .chat_view import ChatView
 
 class ClientView(tk.Tk):
     def __init__(self, controller):
@@ -16,16 +15,33 @@ class ClientView(tk.Tk):
         main_frame = tk.Frame(self)
         main_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
         
+        # Frame para o nome de usuário e botão
+        user_frame = tk.Frame(main_frame, bg='#f0f0f0')
+        user_frame.pack(fill=tk.X, pady=(0, 10))
+        
         # Label do nome de usuário
         self.name_label = tk.Label(
-            main_frame, 
+            user_frame, 
             text=f"Usuário: {username}",
             font=('Arial', 10, 'bold'),
             bg='#f0f0f0',
             padx=5,
             pady=2
         )
-        self.name_label.pack(fill=tk.X, pady=(0, 10))
+        self.name_label.pack(side=tk.LEFT)
+        
+        '''
+        # Botao para mudar nome
+        change_name_btn = tk.Button(
+            user_frame,
+            text="Mudar Nome",
+            command=self.controller.model.askName(),
+            font=('Arial', 8),
+            padx=5,
+            pady=2
+        )
+        change_name_btn.pack(side=tk.RIGHT, padx=5)
+        '''
 
         # Lista de usuários online
         self.listbox = tk.Listbox(

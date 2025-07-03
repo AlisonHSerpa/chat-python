@@ -53,10 +53,20 @@ class ChatView(tk.Toplevel):  # Ou tk.Tk se for a janela principal
         self.name_label.config(text=f'conversando com : {username}')
 
     def display_message(self, message):
-        self.chat_area.config(state='normal')
-        self.chat_area.insert(tk.END, f"{message}\n")
-        self.chat_area.config(state='disabled')
-        self.chat_area.yview(tk.END)
+        """Exibe o conteúdo completo do chat no text box"""
+        try:
+            if not isinstance(message, str):
+                message = str(message)
+
+            self.chat_area.config(state='normal')
+            self.chat_area.delete("1.0", tk.END)  # limpa tudo
+            self.chat_area.insert(tk.END, message)
+            self.chat_area.see(tk.END)
+            self.chat_area.config(state='disabled')
+
+        except Exception as e:
+            print(f"Error displaying message: {e}")
+
 
     def get_message_input(self):
         return self.message_entry.get("1.0", tk.END).strip()
@@ -65,6 +75,7 @@ class ChatView(tk.Toplevel):  # Ou tk.Tk se for a janela principal
         self.message_entry.delete("1.0", tk.END)
 
     def on_close(self):
+        self.controller.__del__()
         self.destroy()
 
     def show_error(self, message):
