@@ -40,6 +40,14 @@ class MessageController:
         line = f"{self.model.username} : {message}"
         self.model.writer.add_line(self.diretorio, line)
 
+        # Atualiza imediatamente o chat na interface
+        try:
+            current_content = self.model.writer.read_file(self.diretorio)
+            if current_content:
+                self.view.display_message(current_content)
+        except Exception as e:
+            print(f"Erro ao atualizar chat após envio: {e}")
+
     def update_chat(self):
         last_content = ""
         while self.running:
