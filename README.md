@@ -50,7 +50,7 @@ Este projeto utiliza um arquivo `.env` para armazenar informações sensíveis, 
 Na raiz do projeto, crie um arquivo chamado `.env` com o seguinte conteúdo (exemplo):
 
 ```
-MONGO_CONNECTION_STRING=mongodb+srv://<usuario>:<senha_codificada>@seucluster.mongodb.net/nomeDoBanco?retryWrites=true&w=majority
+MONGO_CONNECTION_STRING=mongodb+srv://<usuario>:<senha_codificada>@<seucluster>.mongodb.net/nomeDoBanco?retryWrites=true&w=majority
 ```
 
 > **Importante:**
