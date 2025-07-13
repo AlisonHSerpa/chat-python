@@ -1,5 +1,3 @@
----
-
 # 💬 Chat Cliente-Servidor com Python + Tkinter
 
 Este projeto é uma aplicação de chat simples baseada em **comunicação socket TCP com threads**, desenvolvida em **Python**, com uma interface gráfica usando **Tkinter**.
@@ -52,7 +50,7 @@ Este projeto utiliza um arquivo `.env` para armazenar informações sensíveis, 
 Na raiz do projeto, crie um arquivo chamado `.env` com o seguinte conteúdo (exemplo):
 
 ```
-MONGO_CONNECTION_STRING=mongodb+srv://usuario:senha_codificada@seucluster.mongodb.net/nomeDoBanco?retryWrites=true&w=majority
+MONGO_CONNECTION_STRING=mongodb+srv://<usuario>:<senha_codificada>@seucluster.mongodb.net/nomeDoBanco?retryWrites=true&w=majority
 ```
 
 > **Importante:**
