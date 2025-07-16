@@ -34,14 +34,14 @@ class MessageController:
                 except json.JSONDecodeError:
                     # Se não for um JSON válido
                     error_msg = MessageModel("error","server","unknown", "Formato de dados inválido. Envie um JSON válido.")
-                    client_socket.sendall(json.dumps(error_msg).encode())
+                    client_socket.sendall(error_msg.get_message().encode())
                     client_socket.close()
                     return None
                 except Exception as e:
                     print(f"Erro ao configurar novo cliente: {e}")
                     error_msg = MessageModel("error","server","unkown",f"Erro interno do servidor: {str(e)}")
                     try:
-                        client_socket.sendall(json.dumps(error_msg).encode())
+                        client_socket.sendall(error_msg.get_message().encode())
                     except:
                         pass
                     client_socket.close()
@@ -65,11 +65,11 @@ class MessageController:
             print("Usuário de origem ou destino não encontrado.")
             return
 
-        json_message = MessageModel("message", origin, destiny, message)
-        destiny_client.socket.sendall(json.dumps(json_message).encode())
+        response = MessageModel("message", origin, destiny, message)
+        destiny_client.socket.sendall(response.get_message.encode())
 
-    def handle_username(self, origin_socket, username):
+    def handle_username(self, address, username):
         for client in self.model.clients:
-            if client.socket == origin_socket:
+            if client.address == address:
                 client.setusername(username)
                 break
