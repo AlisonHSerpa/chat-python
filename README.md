@@ -17,6 +17,8 @@ A arquitetura é modular e se encontra organizada na pasta `version_4/`.
 * `socket` (módulo nativo)
 * `threading` (módulo nativo)
 * `tkinter` (módulo nativo para GUI)
+* `pymongo` (driver oficial MongoDB para Python)
+* `python-dotenv` (para carregar variáveis do arquivo `.env`)
 
 ---
 
@@ -31,12 +33,30 @@ cd chat-python/version_4
 
 ### 2. 📦 Instale as dependências
 
-As bibliotecas utilizadas são todas nativas do Python, então nenhuma instalação via pip é necessária. Basta garantir que o Python esteja instalado corretamente.
+As bibliotecas nativas do Python já vêm instaladas, mas para integrar com o MongoDB e usar o `.env`, instale as bibliotecas extras:
 
-> ✅ Requisitos:
+```bash
+pip install pymongo python-dotenv
+```
+
+---
+
+## ⚙️ Configuração do Ambiente (.env)
+
+Este projeto utiliza um arquivo `.env` para armazenar informações sensíveis, como a string de conexão do MongoDB. Por segurança, o arquivo `.env` **não está versionado** e deve ser criado manualmente.
+
+### Como criar o arquivo `.env`
+
+Na raiz do projeto, crie um arquivo chamado `.env` com o seguinte conteúdo (exemplo):
+
+```
+MONGO_CONNECTION_STRING=mongodb+srv://<usuario>:<senha_codificada>@<seucluster>.mongodb.net/nomeDoBanco?retryWrites=true&w=majority
+```
+
+> **Importante:**
 >
-> * Python 3.8 ou superior instalado.
-> * Tkinter instalado (vem por padrão com Python em muitas distribuições).
+> * Se sua senha contém caracteres especiais, **ela deve estar URL-encoded** na string (exemplo: `@` vira `%40`, `#` vira `%23`).
+> * Você pode usar o Python para fazer o encode da senha com o módulo `urllib.parse.quote_plus()`.
 
 ---
 
