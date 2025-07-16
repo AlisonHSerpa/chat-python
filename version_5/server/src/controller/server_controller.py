@@ -61,9 +61,9 @@ class ServerController:
     def list_online_users(self):
         while True:
             users = [client.username for client in self.model.clients]
-            message = MessageModel("userlist","server","all", users)
             for client in list(self.model.clients):
                 try:
+                    message = MessageModel("userlist","server",client.username, users)
                     client.socket.sendall(message.get_message().encode())
                 except Exception:
                     self.model.clients.remove(client)
