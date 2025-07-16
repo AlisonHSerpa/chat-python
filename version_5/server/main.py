@@ -3,8 +3,8 @@ from src import create_server
 
 def main():
     # Cria e configura o servidor
-    model, controller = create_server()
-    model.initialize_server()
+    controller = create_server()
+    controller.model.initialize_server()
     
     # Inicia thread para checar as conexoes ativas e enviar lista de usuarios
     Thread(target=controller.list_online_users, daemon=True).start()

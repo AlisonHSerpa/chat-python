@@ -1,16 +1,75 @@
 from ..model import *
 from socket import socket, AF_INET, SOCK_STREAM
+from queue import Queue
+import json
 
 class MessageController:
-    def __init__(self, server):
+    def __init__(self, server, model):
         self.server = server
+        self.notification = Queue()
+        self.model = model
+    
+    def listen(self, client_socket):
+        """Gerencia a transmissão de mensagens de um cliente"""
+        client = self.model.get_client_by_socket(client_socket)
+        if not client:
+            print("listen() falhou")
+            return
+        
+        print(f'Escutando o cliente: {client.address}')
+        
+        try:
+            while True:
+                mensagem = client_socket.recv(1500)
 
-    def sendMessage(self, socket, message):
-        socket.sendAll(message.encode())
-        return None
+                try:
+                    json_data = self.model.receive_data_server(mensagem)
 
-    def retrieve_old_messages(self, key):
-        client = ClientModel.get_client_by_key(key)
-        path = f"<path>/{client.username}"
+                    # faz o tratamento adequado para cada tipo de mensagem
+                    if json_data.get("type") == "changeusername" and json_data.get("to") == "server":
+                        self.handle_username(json_data["from"], json_data["body"])
+                    if json_data.get("type") == "message" and json_data.get("to") != None:
+                        self.handle_message(json_data["from"], json_data["to"], json_data["body"])
 
-        return None
+                except json.JSONDecodeError:
+                    # Se não for um JSON válido
+                    error_msg = MessageModel("error","server","unknown", "Formato de dados inválido. Envie um JSON válido.")
+                    client_socket.sendall(json.dumps(error_msg).encode())
+                    client_socket.close()
+                    return None
+                except Exception as e:
+                    print(f"Erro ao configurar novo cliente: {e}")
+                    error_msg = MessageModel("error","server","unkown",f"Erro interno do servidor: {str(e)}")
+                    try:
+                        client_socket.sendall(json.dumps(error_msg).encode())
+                    except:
+                        pass
+                    client_socket.close()
+                    return None
+        except ConnectionResetError:
+            print(f"Conexão resetada pelo cliente: {client.username}")
+        except Exception as e:
+            print(f"Erro com cliente {client.username}: {e}")
+        finally:
+            self.model.remove_client(client_socket)
+            client_socket.close()
+
+    def handle_message(self, origin, destiny, message):
+        """Envia mensagem para o cliente"""
+
+        # procura o objeto cliente de origem
+        origin_client = self.model.get_client_by_username(origin)
+        destiny_client = self.model.get_client_by_username(destiny)
+
+        if not origin_client or not destiny_client:
+            print("Usuário de origem ou destino não encontrado.")
+            return
+
+        json_message = MessageModel("message", origin, destiny, message)
+        destiny_client.socket.sendall(json.dumps(json_message).encode())
+
+    def handle_username(self, origin_socket, username):
+        for client in self.model.clients:
+            if client.socket == origin_socket:
+                client.setusername(username)
+                break

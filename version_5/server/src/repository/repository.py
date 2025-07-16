@@ -65,11 +65,11 @@ class Repository:
         
         return messages_queue
         
-    def find_client_by_key(self, key):
+    def get_client_by_key(self, key):
         client = self.clients.find_one({"key": key})
         return client
     
-    def find_client_by_username(self, username):
+    def get_client_by_username(self, username):
         client = self.clients.find_one({"username": username})
         return client
     

@@ -8,20 +8,13 @@ import json
 class ServerModel:
     def __init__(self):
         self.server_socket = socket(AF_INET, SOCK_STREAM)
-        self.clients = []  # Lista de objetos ClientModel
+        self.clients = []  # Lista de objetos ClientModel (representa usuarios online)
     
     def initialize_server(self, host='0.0.0.0', port=8000):
         """Inicializa o socket do servidor"""
         self.server_socket.bind((host, port))
         self.server_socket.listen()
         print(f'Aguardando por novas conexões na porta {port}')
-
-    def add_client(self, client_socket, client_address, username):
-        """Adiciona um novo cliente à lista"""
-        client = ClientModel(client_socket, client_address, username)
-        self.clients.append(client)
-        print(f'Nova conexão de: {client_address}')
-        return client
     
     def remove_client(self, client_socket):
         """Remove um cliente da lista"""
