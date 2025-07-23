@@ -1,11 +1,66 @@
 import os
 from queue import Queue
 from threading import Thread
+import json
 
 class WriterService:
     def __init__(self):
         self.notification = Queue() # aqui vao ser colocados jsons das mensagens
         self.chat_path = "./chats/"
+
+    # criar write_client
+    def write_client(self, diretorio, json_data):
+        """
+        Cria um arquivo JSON com os dados do cliente.
+
+        Parâmetros:
+        - diretorio: caminho onde o arquivo será salvo (ex: './user.txt')
+        - json_data: dicionário com os campos:
+            {
+                "username": "nome_do_usuario",
+                "private_key": "chave_privada_em_formato_string",
+                "public_key": "chave_publica_em_formato_string",
+                "local_key": "qualquer_valor_que_desejar"
+            }
+        """
+        try:
+            with open(diretorio, 'w', encoding='utf-8') as file:
+                json.dump(json_data, file, indent=4)
+        except Exception as e:
+            raise RuntimeError(f"Erro ao escrever o arquivo JSON: {e}")
+
+    # criar read_json, ele deve ler um arquivo e retornar:
+    '''
+        "username" : "",
+        "private_key": "",
+        "public_key": "",
+        "local_key": "",
+    '''
+    def read_json(self, diretorio):
+        '''Lê um arquivo JSON e retorna os campos esperados'''
+        try:
+            with open(diretorio, 'r', encoding='utf-8') as file:
+                data = json.load(file)
+
+            # Verifica se todos os campos necessários estão presentes
+            required_fields = ["username", "private_key", "public_key", "local_key"]
+            for field in required_fields:
+                if field not in data:
+                    raise ValueError(f"Campo '{field}' ausente no arquivo.")
+
+            return {
+                "username": data["username"],
+                "private_key": data["private_key"],
+                "public_key": data["public_key"],
+                "local_key": data["local_key"]
+            }
+
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Arquivo '{diretorio}' não encontrado.")
+        except json.JSONDecodeError:
+            raise ValueError(f"O conteúdo do arquivo '{diretorio}' não é um JSON válido.")
+        except Exception as e:
+            raise RuntimeError(f"Erro ao ler arquivo JSON: {e}")
 
     def write_file(self, path_file, text, modo='w'):
         ''' escreve algo num diretorio, se nao existir o diretorio ele cria'''

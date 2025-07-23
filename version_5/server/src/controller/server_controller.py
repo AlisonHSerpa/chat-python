@@ -5,6 +5,7 @@ import time
 from ..model import *
 from ..repository import *
 from .message_controller import MessageController
+from socket import socket, AF_INET, SOCK_STREAM
 
 class ServerController:
     def __init__(self):
@@ -18,30 +19,51 @@ class ServerController:
             # Recebe o handshake de username
             data = client_socket.recv(1500).decode()
             mensagem = json.loads(data)
-        
-            # verifica se existe
-            try:
-                data = ClientModel.get_client_by_key(self.repository, mensagem["body"])
-                # no futuro tera um teste para ver se a chave privada do cliente esta correta
-                # por enquanto vamos assumir que se encontrou esta correto
 
-                client = ClientModel(data["username"],client_socket,client_address,data["key"])
-            except:
-                # se nao existe, cria
-                try:
-                    # cria e adiciona no banco de dados
-                    client = ClientModel(mensagem["from"], client_socket, client_address, mensagem["body"])
-                    client.register_new_client(self.repository)
-                except Exception as e:
-                    print(f"erro ao salvar novo cliente: {e}")
-            finally:
-                # adiciona na lista de online
-                self.model.clients.append(client)    
-                return client
+            cliente = None  # inicializa para evitar UnboundLocalError
+
+            if mensagem["type"] == "login":
+                dict = self.repository.get_client_by_username(mensagem["from"])
+                if not dict:
+                    response = MessageModel("erro", "server", mensagem["from"], "usuario nao existe")
+                    client_socket.sendall(response.get_message().encode())
+                    client_socket.close()
+                    return None
+
+                if mensagem["body"] == "Hello server!":
+                    # verificar se ele tem mensagens pendentes
+                    response = MessageModel("autorized", "server", mensagem["from"], "")
+                    client_socket.sendall(response.get_message().encode())
+
+                    # Cria o modelo do cliente conectado
+                    cliente = ClientModel(dict["username"], client_socket, client_address, dict["key"])
+                else:
+                    response = MessageModel("erro", "server", mensagem["from"], "falha na autenticacao")
+                    client_socket.sendall(response.get_message().encode())
+                    client_socket.close()
+                    return None
+
+            elif mensagem["type"] == "sign up":
+                dto = ClienteDTO(mensagem["from"], mensagem["body"])
+                self.repository.insert_client(dto.make_json())
+
+                response = MessageModel("autorized", "server", mensagem["from"], "")
+                client_socket.sendall(response.get_message().encode())
+
+                cliente = ClientModel(mensagem["from"], client_socket, client_address, mensagem["body"])
+
+            else:
+                client_socket.close()
+                return None
+
+            self.model.clients.append(cliente)
+            return cliente
+
         except Exception as e:
             print(f"Erro ao configurar novo cliente: {e}")
             client_socket.close()
             return None
+
     
     def connection_request_loop(self):
         """Aceita novas conexões de clientes"""

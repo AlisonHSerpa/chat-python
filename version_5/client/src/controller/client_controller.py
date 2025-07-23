@@ -1,29 +1,25 @@
 from threading import Thread
 from .message_controller import MessageController
 import json
+from ..model import *
+from ..view import ClientView
 
 class ClientController:
     def __init__(self):
-        self.model = None
-        self.view = None
         self.chats = []
         self.online_users = []
         self.setup_mvc()
 
     def setup_mvc(self):
         ''' inicia toda a aplicacao criando cliente, interface e conexoes'''
-        from ..model import ClientModel
-        from ..view import ClientView
         
         self.model = ClientModel()
         self.view = ClientView(self)
         
-        # Conecta ao servidor
-        connection_result = self.model.connect_to_server()
-        if connection_result is not True:
-            self.view.show_error(f"Falha na conexão: {connection_result}")
+        if not self.model.socket:
+            print("erro na criacao do cliente")
             return
-        
+
         # Configura o listener para mensagens do servidor
         self.start_listening()
         
@@ -40,7 +36,7 @@ class ClientController:
                         break
 
                     try:
-                        mensagem= self.model.receive_data(response)
+                        mensagem = MessageModel.receive_data(response)
                         self.model.message_queue.put(mensagem)
                     except json.JSONDecodeError:
                         print("Erro ao decodificar mensagem")

@@ -12,11 +12,6 @@ class MessageModel:
     def get_message(self):
         return json.dumps(self.message)
     
-    ''' escrever a mensgem na lista de nao enviadas'''
-    def hold_message(self,repository):
-        repository.insert_message(self.get_message())
-    
-    ''' ler mensagem da lista de nao enviadas '''
     @staticmethod
-    def recover_message_from_client(repository, username):
-        repository.find_client_by_username(username)
+    def receive_data(response):
+        return json.loads(response)

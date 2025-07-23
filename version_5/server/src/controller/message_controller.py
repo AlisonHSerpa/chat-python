@@ -66,7 +66,7 @@ class MessageController:
             return
 
         response = MessageModel("message", origin, destiny, message)
-        destiny_client.socket.sendall(response.get_message.encode())
+        destiny_client.socket.sendall(response.get_message().encode())
 
     def handle_username(self, address, username):
         for client in self.model.clients:
