@@ -8,7 +8,6 @@ class WriterService:
         self.notification = Queue() # aqui vao ser colocados jsons das mensagens
         self.chat_path = "./chats/"
 
-    # criar write_client
     def write_client(self, diretorio, json_data):
         """
         Cria um arquivo JSON com os dados do cliente.
@@ -29,7 +28,6 @@ class WriterService:
         except Exception as e:
             raise RuntimeError(f"Erro ao escrever o arquivo JSON: {e}")
 
-    # criar read_json, ele deve ler um arquivo e retornar:
     '''
         "username" : "",
         "private_key": "",

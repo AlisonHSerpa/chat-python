@@ -11,7 +11,7 @@ class ServerController:
     def __init__(self):
         self.model = ServerModel()
         self.repository = Repository()
-        self.message_controller = MessageController(self, self.model)
+        self.message_controller = MessageController(self, self.model, self.repository)
 
     def handle_new_connection(self, client_socket, client_address):
         """Processa a conexão inicial do cliente"""
@@ -31,12 +31,14 @@ class ServerController:
                     return None
 
                 if mensagem["body"] == "Hello server!":
-                    # verificar se ele tem mensagens pendentes
                     response = MessageModel("autorized", "server", mensagem["from"], "")
                     client_socket.sendall(response.get_message().encode())
 
                     # Cria o modelo do cliente conectado
                     cliente = ClientModel(dict["username"], client_socket, client_address, dict["key"])
+
+                    # verificar se ele tem mensagens pendentes
+                    self.message_controller.retreive_old_messages(cliente)
                 else:
                     response = MessageModel("erro", "server", mensagem["from"], "falha na autenticacao")
                     client_socket.sendall(response.get_message().encode())
@@ -82,7 +84,7 @@ class ServerController:
 
     def list_online_users(self):
         while True:
-            users = [client.username for client in self.model.clients]
+            users = self.repository.get_all_clients()
             for client in list(self.model.clients):
                 try:
                     message = MessageModel("userlist","server",client.username, users)

@@ -10,6 +10,7 @@ class MessageController:
         self.client_controller = client_controller
         self.diretorio = f"./chats/{self.target}.txt"
         self.running = True
+        # aqui precisa ter uma variavel temporaria definida por um metodo
 
     def create_view(self):
         ''' Must be called from the main thread (Tkinter-safe) '''
@@ -28,6 +29,10 @@ class MessageController:
         if not message:
             return
         
+        '''
+            Aqui cabe criptografar a mensagem
+        '''
+
         # envia a mensagem
         self.model.send_message(self.target , message)
 

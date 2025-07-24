@@ -4,10 +4,11 @@ from queue import Queue
 import json
 
 class MessageController:
-    def __init__(self, server, model):
+    def __init__(self, server, model, repository):
         self.server = server
         self.notification = Queue()
         self.model = model
+        self.repository = repository
     
     def listen(self, client_socket):
         """Gerencia a transmissão de mensagens de um cliente"""
@@ -56,20 +57,54 @@ class MessageController:
 
     def handle_message(self, origin, destiny, message):
         """Envia mensagem para o cliente"""
+        try:
+            # procura o objeto cliente de origem
+            origin_client = self.repository.get_client_by_username(origin)
+            if origin_client is None:
+                print(f"Usuário de origem '{origin}' não encontrado.")
+                return
 
-        # procura o objeto cliente de origem
-        origin_client = self.model.get_client_by_username(origin)
-        destiny_client = self.model.get_client_by_username(destiny)
-
-        if not origin_client or not destiny_client:
-            print("Usuário de origem ou destino não encontrado.")
+            target_client = self.repository.get_client_by_username(destiny)
+            if target_client is None:
+                print(f"Usuário de destino '{destiny}' não encontrado.")
+                return
+        except Exception as e:
+            print(f"Erro ao acessar o banco de dados: {e}")
             return
 
+        # Criar o objeto de mensagem
         response = MessageModel("message", origin, destiny, message)
-        destiny_client.socket.sendall(response.get_message().encode())
+
+        # Verifica se o cliente está online
+        destiny_client = None
+        for client in self.model.clients:
+            if client.username == target_client["username"]:
+                destiny_client = client
+                break
+
+        if not destiny_client:
+            # destino existe, mas está offline
+            response.hold_message(self.repository)
+            print(f"Mensagem para {destiny} armazenada como pendente.")
+        else:
+            # destino está online, envia direto via socket
+            try:
+                destiny_client.socket.sendall(response.get_message().encode())
+                print(f"Mensagem enviada para {destiny}.")
+            except Exception as e:
+                print(f"Erro ao enviar mensagem para {destiny}: {e}")
+
 
     def handle_username(self, address, username):
         for client in self.model.clients:
             if client.address == address:
                 client.setusername(username)
                 break
+
+    # metodo para reenviar mensagens pendentes
+    def retreive_old_messages(self, cliente):
+        mensagens_pendentes = self.repository.find_and_delete_all_messages_by_username(cliente.username)
+
+        while not mensagens_pendentes.empty():
+            mensagem = mensagens_pendentes.get()
+            cliente.socket.sendall(json.dumps(mensagem).encode())
