@@ -36,6 +36,9 @@ def ask_username():
     entry_username.pack(pady=5)
     entry_username.focus()
 
+    # Bind Enter (Return) → mesma ação do botão
+    window.bind("<Return>", lambda event: save_and_close())
+
     # Botão
     tk.Button(
         window,

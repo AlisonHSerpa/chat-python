@@ -1,6 +1,9 @@
-from ..view import ChatView
 import time
-from threading import Thread
+import threading
+import os
+from ..view import ChatView
+from ..service import WriterService
+from ..model import *
 
 class MessageController:
     def __init__(self, model, target, client_controller):
@@ -8,62 +11,77 @@ class MessageController:
         self.target = target
         self.view = None
         self.client_controller = client_controller
-        self.diretorio = f"./chats/{self.target}.txt"
+        self.diretorio = WriterService.get_chat_file_path(self.target)
         self.running = True
-        # aqui precisa ter uma variavel temporaria definida por um metodo
+        self.update_thread = None
+        self._chat_lock = threading.Lock()
+        
+        # Garante que o arquivo existe de forma thread-safe
+        WriterService.read_file(self.diretorio)
 
     def create_view(self):
         ''' Must be called from the main thread (Tkinter-safe) '''
-        # inicia a UI do chat
         self.view = ChatView(self)
-
-        # atualizar o chat
-        update_thread = Thread(target=self.update_chat, daemon=True)
-        update_thread.start()
-
+        
+        # Inicia a thread de atualização
+        self.update_thread = threading.Thread(target=self.update_chat, daemon=True)
+        self.update_thread.start()
+        
         return self.view
 
     def send_message(self):
         ''' pega o que foi digitado no label e envia para target dps coloca no txt '''
-        message = self.view.get_message_input()
-        if not message:
+        body = self.view.get_message_input()
+        if not body:
             return
         
-        '''
-            Aqui cabe criptografar a mensagem
-        '''
+        # Aqui cabe criptografar a mensagem
+        criptografar = body
 
-        # envia a mensagem
-        self.model.send_message(self.target , message)
+        # Monta a mensagem
+        message = MessageModel("message", self.model.username, self.target, criptografar)
 
-        # mostra no chat
-        self.post_message(message)
+        # Envia a mensagem
+        self.model.send_message(message)
+
+        # Mostra no chat e salva
+        self.post_message(message.message)
         self.view.clear_message_input()
 
     def post_message(self, message):
-        ''' coloca no txt '''
-        line = f"{self.model.username} : {message}"
-        self.model.writer.add_line(self.diretorio, line)
+        ''' coloca no txt de forma thread-safe '''
+        with self._chat_lock:
+            WriterService.save_own_message(message)
+            self._update_chat_display()
 
-        # Atualiza imediatamente o chat na interface
+    def _update_chat_display(self):
+        ''' Atualiza o display do chat de forma thread-safe '''
         try:
-            current_content = self.model.writer.read_file(self.diretorio)
+            current_content = WriterService.read_file(self.diretorio)
             if current_content:
                 self.view.display_message(current_content)
         except Exception as e:
-            print(f"Erro ao atualizar chat após envio: {e}")
+            print(f"Erro ao atualizar chat: {e}")
 
     def update_chat(self):
-        last_content = ""
+        ''' Thread que verifica atualizações no arquivo de chat '''
+        last_modified = 0
         while self.running:
             try:
-                current_content = self.model.writer.read_file(self.diretorio)
-                if current_content is not None and current_content != last_content:
-                    self.view.display_message(current_content)
-                    last_content = current_content
+                current_modified = os.path.getmtime(self.diretorio) if os.path.exists(self.diretorio) else 0
+                if current_modified > last_modified:
+                    with self._chat_lock:
+                        self._update_chat_display()
+                    last_modified = current_modified
             except Exception as e:
-                print(f"Erro ao atualizar chat: {e}")
+                print(f"Erro ao verificar atualizações do chat: {e}")
             time.sleep(1.5)
 
-    def __del__(self):
+    def stop(self):
+        ''' Para a thread de atualização '''
         self.running = False
+        if self.update_thread and self.update_thread.is_alive():
+            self.update_thread.join(timeout=1)
+
+    def __del__(self):
+        self.stop()

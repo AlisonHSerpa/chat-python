@@ -3,10 +3,11 @@ from .message_controller import MessageController
 import json
 from ..model import *
 from ..view import ClientView
+from ..service import WriterService
 
 class ClientController:
     def __init__(self):
-        self.chats = []
+        self.chats = {}
         self.online_users = []
         self.setup_mvc()
 
@@ -55,22 +56,26 @@ class ClientController:
             message = self.model.message_queue.get()
             if (message["to"] == self.model.username):
                 if (message["type"] == "message"):
-                    self.model.writer.notification.put(message)
-                    self.model.writer.read_notification()
+                    WriterService.save_message(message)
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)
 
     def create_chat(self, target):
-        """Generates a thread for each chat (each chat shares the main handler)."""
+        """Abre um chat com o usuário 'target' ou foca na janela se já existir"""
+        if target in self.chats:
+            # Se já existir, foca a janela (caso esteja minimizada ou atrás)
+            chat = self.chats[target]
+            chat.view.lift()
+            return
+
         def thread_chat():
             chat = MessageController(self.model, target, self)
+            self.chats[target] = chat  # Armazena o chat com base no target
             chat.create_view()
 
-        # Start the thread (pass the function, don't call it!)
-        thread = Thread(target=thread_chat)
-        thread.daemon = True  # Optional: Kills thread when main program exits
+        thread = Thread(target=thread_chat, daemon=True)
         thread.start()
 
     def set_online_users(self, server_users):

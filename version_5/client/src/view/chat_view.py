@@ -40,7 +40,7 @@ class ChatView(tk.Toplevel):  # Ou tk.Tk se for a janela principal
         # Campo de mensagem
         self.message_entry = tk.Text(self, height=3)
         self.message_entry.pack(padx=10, pady=5, fill=tk.X)
-        self.message_entry.bind("<Return>", lambda e: self.controller.send_message())
+        self.message_entry.bind("<Return>", self._on_enter_pressed)
 
         # Frame de botões
         button_frame = tk.Frame(self)
@@ -80,3 +80,7 @@ class ChatView(tk.Toplevel):  # Ou tk.Tk se for a janela principal
 
     def show_error(self, message):
         messagebox.showerror("Erro", message)
+
+    def _on_enter_pressed(self, event):
+        self.controller.send_message()
+        return "break"

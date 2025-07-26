@@ -1,149 +1,170 @@
 import os
-from queue import Queue
-from threading import Thread
 import json
+import threading
 
 class WriterService:
-    def __init__(self):
-        self.notification = Queue() # aqui vao ser colocados jsons das mensagens
-        self.chat_path = "./chats/"
+    BASE_DIR = os.path.dirname(os.path.abspath(os.path.join(__file__, "..", "..")))
+    DATA_DIR = os.path.join(BASE_DIR, "data")
+    _file_locks = {}  # Dicionário para armazenar locks por arquivo
+    _lock = threading.Lock()  # Lock para operações no dicionário de locks
 
-    def write_client(self, diretorio, json_data):
-        """
-        Cria um arquivo JSON com os dados do cliente.
+    @staticmethod
+    def _get_file_lock(filepath):
+        with WriterService._lock:
+            if filepath not in WriterService._file_locks:
+                WriterService._file_locks[filepath] = threading.Lock()
+            return WriterService._file_locks[filepath]
 
-        Parâmetros:
-        - diretorio: caminho onde o arquivo será salvo (ex: './user.txt')
-        - json_data: dicionário com os campos:
-            {
-                "username": "nome_do_usuario",
-                "private_key": "chave_privada_em_formato_string",
-                "public_key": "chave_publica_em_formato_string",
-                "local_key": "qualquer_valor_que_desejar"
-            }
-        """
-        try:
-            with open(diretorio, 'w', encoding='utf-8') as file:
-                json.dump(json_data, file, indent=4)
-        except Exception as e:
-            raise RuntimeError(f"Erro ao escrever o arquivo JSON: {e}")
+    @staticmethod
+    def write_client(json_data=None, diretorio=None):
+        if diretorio is None:
+            diretorio = WriterService.get_user_file_path()
 
-    '''
-        "username" : "",
-        "private_key": "",
-        "public_key": "",
-        "local_key": "",
-    '''
-    def read_json(self, diretorio):
-        '''Lê um arquivo JSON e retorna os campos esperados'''
-        try:
-            with open(diretorio, 'r', encoding='utf-8') as file:
-                data = json.load(file)
+        folder = os.path.dirname(diretorio)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
 
-            # Verifica se todos os campos necessários estão presentes
-            required_fields = ["username", "private_key", "public_key", "local_key"]
-            for field in required_fields:
-                if field not in data:
-                    raise ValueError(f"Campo '{field}' ausente no arquivo.")
+        if json_data is None:
+            raise ValueError("erro ao tentar ler usuario")
 
-            return {
-                "username": data["username"],
-                "private_key": data["private_key"],
-                "public_key": data["public_key"],
-                "local_key": data["local_key"]
-            }
-
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Arquivo '{diretorio}' não encontrado.")
-        except json.JSONDecodeError:
-            raise ValueError(f"O conteúdo do arquivo '{diretorio}' não é um JSON válido.")
-        except Exception as e:
-            raise RuntimeError(f"Erro ao ler arquivo JSON: {e}")
-
-    def write_file(self, path_file, text, modo='w'):
-        ''' escreve algo num diretorio, se nao existir o diretorio ele cria'''
-        try:
-            # Cria o diretorio se nao existir
-            dir_path = os.path.dirname(path_file)
-            if dir_path and not os.path.exists(dir_path):
-                os.makedirs(dir_path)
-
-            # Escreve no arquivo
-            with open(path_file, modo, encoding='utf-8') as arquivo:
-                arquivo.write(text)
-            return True
-
-        except FileExistsError:
-            print(f"Erro: Arquivo '{path_file}' já existe (modo 'x' ativado).")
-            return False
-        except PermissionError:
-            print(f"Erro: Sem permissão para escrever em '{path_file}'.")
-            return False
-        except IsADirectoryError:
-            print(f"Erro: '{path_file}' é um diretório, não um arquivo.")
-            return False
-        except Exception as e:
-            print(f"Erro inesperado ao escrever no arquivo: {e}")
-            return False
-        
-    def read_file(self, path_file, default_content=""):
-        """ le um arquivo de texto e entrega tudo que tem nele, se nao existe ele cria """
-        try:
-            # Try to read the file first
-            with open(path_file, 'r', encoding='utf-8') as arquivo:
-                return arquivo.read()
-                
-        except FileNotFoundError:
+        file_lock = WriterService._get_file_lock(diretorio)
+        with file_lock:
             try:
-                # Create directories if they don't exist
-                os.makedirs(os.path.dirname(path_file), exist_ok=True)
-                
-                # Create file with default content
-                with open(path_file, 'w', encoding='utf-8') as arquivo:
-                    arquivo.write(default_content)
-                return default_content
-                
-            except Exception as create_error:
-                print(f"Erro ao criar arquivo: {create_error}")
-                return None
-                
-        except Exception as read_error:
-            print(f"Erro ao ler arquivo: {read_error}")
-            return None
+                with open(diretorio, 'w', encoding='utf-8') as file:
+                    json.dump(json_data, file, indent=4)
+            except Exception as e:
+                raise RuntimeError(f"Erro ao escrever o arquivo JSON: {e}")
 
-    def add_line(self, file_path, line):
-        """ Adds a line to a file, creating directories and file if they don't exist """
-        try:
-            # Create directory if it doesn't exist (using the parent directory of the file)
-            dir_path = os.path.dirname(file_path)
-            if dir_path:  # Only try to create if there is a directory path
-                os.makedirs(dir_path, exist_ok=True)
-            
-            # Convert single string to list for uniform handling
-            lines = [line] if isinstance(line, str) else line
-            
-            # Open file in append mode (creates file if it doesn't exist)
-            with open(file_path, 'a', encoding='utf-8') as arquivo:
-                for linha in lines:
-                    # Ensure each line ends with newline if it doesn't already
-                    if not linha.endswith('\n'):
-                        linha = linha + '\n'
-                    arquivo.write(linha)
-            
-            return True
-        
-        except Exception as e:
-            print(f"Error writing to file {file_path}: {e}")
+    @staticmethod
+    def read_client(diretorio=None):
+        if diretorio is None:
+            diretorio = WriterService.get_user_file_path()
+
+        file_lock = WriterService._get_file_lock(diretorio)
+        with file_lock:
+            try:
+                with open(diretorio, 'r', encoding='utf-8') as file:
+                    data = json.load(file)
+
+                required_fields = ["username", "private_key", "public_key", "local_key"]
+                for field in required_fields:
+                    if field not in data:
+                        raise ValueError(f"Campo '{field}' ausente no arquivo.")
+
+                return {
+                    "username": data["username"],
+                    "private_key": data["private_key"],
+                    "public_key": data["public_key"],
+                    "local_key": data["local_key"]
+                }
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Arquivo '{diretorio}' não encontrado.")
+            except json.JSONDecodeError:
+                raise ValueError(f"O conteúdo do arquivo '{diretorio}' não é um JSON válido.")
+            except Exception as e:
+                raise RuntimeError(f"Erro ao ler arquivo JSON: {e}")
+
+    @staticmethod
+    def write_file(text="", path_file=None, modo='w'):
+        if path_file is None:
+            path_file = f"{WriterService.DATA_DIR}/temp/log.txt"
+
+        file_lock = WriterService._get_file_lock(path_file)
+        with file_lock:
+            try:
+                dir_path = os.path.dirname(path_file)
+                if dir_path and not os.path.exists(dir_path):
+                    os.makedirs(dir_path)
+
+                with open(path_file, modo, encoding='utf-8') as arquivo:
+                    arquivo.write(text)
+                return True
+            except Exception as e:
+                print(f"Erro ao escrever no arquivo: {e}")
+                return False
+
+    @staticmethod
+    def read_file(path_file, default_content=""):
+        file_lock = WriterService._get_file_lock(path_file)
+        with file_lock:
+            try:
+                if os.path.exists(path_file):
+                    with open(path_file, 'r', encoding='utf-8') as arquivo:
+                        return arquivo.read()
+                else:
+                    dir_path = os.path.dirname(path_file)
+                    if dir_path and not os.path.exists(dir_path):
+                        os.makedirs(dir_path)
+                    
+                    with open(path_file, 'w', encoding='utf-8') as arquivo:
+                        arquivo.write(default_content)
+                    return default_content
+            except Exception as e:
+                print(f"Erro ao ler/criar arquivo: {e}")
+                return None
+
+    @staticmethod
+    def _add_line(file_path, line):
+        file_lock = WriterService._get_file_lock(file_path)
+        with file_lock:
+            try:
+                dir_path = os.path.dirname(file_path)
+                if dir_path and not os.path.exists(dir_path):
+                    os.makedirs(dir_path)
+                
+                lines = [line] if isinstance(line, str) else line
+                
+                with open(file_path, 'a', encoding='utf-8') as arquivo:
+                    for linha in lines:
+                        if not linha.endswith('\n'):
+                            linha = linha + '\n'
+                        arquivo.write(linha)
+                return True
+            except Exception as e:
+                print(f"Error writing to file {file_path}: {e}")
+                return False
+
+    @staticmethod
+    def save_message(json_message):
+        if not isinstance(json_message, dict):
+            print("save_message: json_message não é um dicionário")
             return False
 
-    def read_notification(self):
-        while not self.notification.empty():
-            # escreve no historico do chat
-            message = self.notification.get()
+        if "from" not in json_message or "body" not in json_message:
+            print("save_message: json_message precisa ter as chaves 'from' e 'body'")
+            return False
 
-            # monta o cabecalho da linha
-            filename = f"{self.chat_path}{message['from']}.txt"
-            line = f"{message['from']} : {message['body']}"
+        sender = str(json_message["from"])
+        body = str(json_message["body"])
+        filename = os.path.join(WriterService.DATA_DIR, "chats", f"{sender}.txt")
+        line = f"{sender} : {body}"
+        return WriterService._add_line(filename, line)
 
-            #escreve a linha
-            self.add_line(filename, line)
+    @staticmethod
+    def save_own_message(json_message):
+        if not isinstance(json_message, dict):
+            print("save_message: json_message não é um dicionário")
+            return False
+
+        if "from" not in json_message or "body" not in json_message:
+            print("save_message: json_message precisa ter as chaves 'from' e 'body'")
+            return False
+
+        sender = str(json_message["from"])
+        target = str(json_message["to"])
+        body = str(json_message["body"])
+        filename = os.path.join(WriterService.DATA_DIR, "chats", f"{target}.txt")
+        line = f"{sender} : {body}"
+        return WriterService._add_line(filename, line)
+
+    @staticmethod
+    def get_chat_file_path(target):
+        return os.path.join(WriterService.DATA_DIR, "chats", f"{target}.txt")
+    
+    @staticmethod
+    def get_user_file_path():
+        return os.path.join(WriterService.DATA_DIR, "user.txt")
+    
+    @staticmethod
+    def get_session_file_path(target):
+        return os.path.join(WriterService.DATA_DIR, "temp", f"{target}.txt")
