@@ -33,8 +33,6 @@ class WriterService:
             print(f"Erro inesperado ao escrever no arquivo: {e}")
             return False
         
-    def write_json():
-        
 
     def read_file(self, path_file, default_content=""):
         """ le um arquivo de texto e entrega tudo que tem nele, se nao existe ele cria """
