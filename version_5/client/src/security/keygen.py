@@ -22,7 +22,7 @@ class Keygen:
     # O código abaixo gera as chave privada e pública PERSISTENTES que serão usadas para o diffie-helman posteriormente.
     @staticmethod
     def generate_keys():
-        private_key = rsa.generate_private_key() # Olhar na documentação o tamanho da chave e etc
+        private_key = rsa.generate_private_key(65537, 2048) # Olhar na documentação o tamanho da chave e etc
         public_key = private_key.public_key()
 
         pem_priv = private_key.private_bytes(
