@@ -53,6 +53,9 @@ class Repository:
         self.clients.insert_one(client)
 
     def insert_message(self, message):
+        required_fields = {"type", "from", "to", "body"}
+        if not required_fields.issubset(message.keys()):
+            raise ValueError("Mensagem incompleta")
         self.messages.insert_one(message)
 
     '''metodos de busca'''
@@ -64,6 +67,18 @@ class Repository:
             messages_queue.put(message)
         
         return messages_queue
+    
+    def find_and_delete_all_messages_by_username(self, username):
+        messages_queue = Queue()
+
+        while True:
+            # Busca e remove uma mensagem com "to" igual ao username
+            message = self.messages.find_one_and_delete({"to": username}, projection={"_id": 0})
+            if not message:
+                break
+            messages_queue.put(message)
+
+        return messages_queue
         
     def get_client_by_key(self, key):
         client = self.clients.find_one({"key": key})
@@ -72,6 +87,9 @@ class Repository:
     def get_client_by_username(self, username):
         client = self.clients.find_one({"username": username})
         return client
+    
+    def get_all_clients(self):
+        return [client["username"] for client in self.clients.find({}, {"_id": 0, "username": 1})]
     
     '''metodos de alteracao'''
     def edit_username_client(self, client, newName):
@@ -94,53 +112,74 @@ if __name__ == "__main__":
     if repo.client is None:
         print("Falha na conexão, teste abortado.")
     else:
-        # JSON simulando um cliente
-        client_json = {
-            "username": "alison",
-            "key": "chave123"
-        }
+        print("Conectado ao MongoDB com sucesso.")
 
-        # JSON simulando uma mensagem
-        message_json = {
-            "type": "text",
-            "from": "alison",
-            "to": "bob",
-            "body": "Olá, Bob!"
-        }
+        # Inserir múltiplos clientes
+        clients = [
+            {"username": "alison", "key": "chave123"},
+            {"username": "bob", "key": "chave456"},
+            {"username": "carol", "key": "chave789"}
+        ]
 
-        # Inserir cliente
-        repo.insert_client(client_json)
-        print("Cliente inserido.")
+        for c in clients:
+            repo.insert_client(c)
+            print(f"Cliente inserido: {c['username']}")
 
-        # Inserir mensagem
-        repo.insert_message(message_json)
-        print("Mensagem inserida.")
+        # Verificar todos os usernames
+        usernames = repo.get_all_clients()
+        print("Todos os clientes no banco:", usernames)
 
-        # Buscar mensagens para bob
-        messages = repo.find_all_messages_by_username("bob")
+        # Inserir mensagens para diferentes destinatários
+        mensagens = [
+            {"type": "text", "from": "alison", "to": "bob", "body": "Oi Bob!"},
+            {"type": "text", "from": "carol", "to": "bob", "body": "Bom dia Bob!"},
+            {"type": "text", "from": "bob", "to": "alison", "body": "E aí Alison!"},
+            {"type": "text", "from": "bob", "to": "carol", "body": "Olá Carol!"}
+        ]
 
-        while not messages.empty():
-            msg = messages.get()
-            print("Mensagem para bob:", msg)
+        for m in mensagens:
+            repo.insert_message(m)
+            print(f"Mensagem de {m['from']} para {m['to']} inserida.")
+
+        # Buscar mensagens para 'bob' (sem deletar)
+        print("\nMensagens destinadas a 'bob' (find_all_messages_by_username):")
+        queue = repo.find_all_messages_by_username("bob")
+        while not queue.empty():
+            print(queue.get())
+
+        # Buscar e deletar mensagens para 'carol'
+        print("\nMensagens destinadas a 'carol' (find_and_delete_all_messages_by_username):")
+        deleted_queue = repo.find_and_delete_all_messages_by_username("carol")
+        while not deleted_queue.empty():
+            print(deleted_queue.get())
+
+        # Verificar se mensagens de 'carol' foram realmente deletadas
+        remaining_carol = repo.find_all_messages_by_username("carol")
+        print("Mensagens restantes para 'carol':", remaining_carol.qsize())
 
         # Buscar cliente por chave
-        client_by_key = repo.find_client_by_key("chave123")
-        print("Cliente encontrado pela chave:", client_by_key)
+        client_by_key = repo.get_client_by_key("chave123")
+        print("\nCliente encontrado pela chave 'chave123':", client_by_key)
 
         # Buscar cliente por username
-        client_by_username = repo.find_client_by_username("alison")
-        print("Cliente encontrado pelo nome:", client_by_username)
+        client_by_username = repo.get_client_by_username("alison")
+        print("Cliente encontrado pelo nome 'alison':", client_by_username)
 
-        # Editar nome do cliente
+        # Editar username do cliente 'alison' para 'alison_renomeado'
         if client_by_username:
             repo.edit_username_client(client_by_username, "alison_renomeado")
-            print("Nome de usuário alterado.")
+            print("Username de 'alison' alterado para 'alison_renomeado'.")
 
-        # Deletar mensagens para bob
-        repo.delete_messages_to_client("bob")
-        print("Mensagens de 'bob' deletadas.")
+        # Verificar alteração
+        renamed = repo.get_client_by_username("alison_renomeado")
+        print("Cliente renomeado encontrado:", renamed)
 
-        # Deletar cliente renomeado
-        repo.delete_client_by_key("chave123")
-        print("Cliente deletado.")
+        # Deletar todas as mensagens para 'alison_renomeado'
+        repo.delete_messages_to_client("alison_renomeado")
+        print("Mensagens de 'alison_renomeado' deletadas.")
+
+        # Deletar todos os clientes (cleanup)
+        for c in clients:
+            repo.delete_client_by_key(c["key"])
+            print(f"Cliente deletado: {c['username']}")
 #'''

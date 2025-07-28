@@ -1,6 +1,4 @@
 __pycache__
 .env
-user.txt
-haykos.txt
-Alison.txt
-alison.txt
+data
+chats
