@@ -63,20 +63,20 @@ class ClientController:
         self.view.after(100, self.process_messages)
 
     def create_chat(self, target):
-        """Abre um chat com o usuário 'target' ou foca na janela se já existir"""
         if target in self.chats:
-            # Se já existir, foca a janela (caso esteja minimizada ou atrás)
             chat = self.chats[target]
-            chat.view.lift()
+            if hasattr(chat, "view") and chat.view.winfo_exists():
+                chat.view.lift()
+            else:
+                del self.chats[target]
             return
 
         def thread_chat():
             chat = MessageController(self.model, target, self)
-            self.chats[target] = chat  # Armazena o chat com base no target
-            chat.create_view()
+            self.chats[target] = chat
+            self.view.after(0, chat.create_view)  # <- IMPORTANTE: Tkinter seguro aqui
 
-        thread = Thread(target=thread_chat, daemon=True)
-        thread.start()
+        Thread(target=thread_chat, daemon=True).start()
 
     def set_online_users(self, server_users):
         ''' pega a lista de usuarios online do servidor'''

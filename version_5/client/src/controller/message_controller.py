@@ -15,6 +15,9 @@ class MessageController:
         self.running = True
         self.update_thread = None
         self._chat_lock = threading.Lock()
+
+        # chave de sessao vai estar com o messagecontroller
+        #self.session_key = self.load_session_key()
         
         # Garante que o arquivo existe de forma thread-safe
         WriterService.read_file(self.diretorio)
@@ -76,6 +79,15 @@ class MessageController:
             except Exception as e:
                 print(f"Erro ao verificar atualizações do chat: {e}")
             time.sleep(1.5)
+
+    def load_session_key(self):
+        ''' vai verificar se tem uma session key e carregar, se nao tiver/for valida, cria uma nova'''
+        data = WriterService.get_session_key(self.target)
+        session_key = SessionKey(data["key"], data["username"], data["expiration_seconds"], data["remaining_messages"], data["valid"])
+        
+        # falta o processo de criar a chave de sessao caso ela nao existir
+
+        return session_key
 
     def stop(self):
         ''' Para a thread de atualização '''
