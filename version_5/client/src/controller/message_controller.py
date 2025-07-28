@@ -48,7 +48,7 @@ class MessageController:
         self.model.send_message(message)
 
         # Mostra no chat e salva
-        self.post_message(message.get_message)
+        self.post_message(message.message)
         self.view.clear_message_input()
 
     def post_message(self, message):
