@@ -27,3 +27,7 @@ class MessageModel:
     @staticmethod
     def recover_message_from_client(repository, username):
         repository.find_client_by_username(username)
+
+    @staticmethod
+    def receive_data(response):
+        return json.loads(response)

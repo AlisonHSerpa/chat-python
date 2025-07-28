@@ -33,8 +33,8 @@ class WriterService:
         file_lock = WriterService._get_file_lock(diretorio)
         with file_lock:
             try:
-                with open(diretorio, 'w', encoding='utf-8') as file:
-                    json.dump(json_data, file, indent=4)
+                with open(diretorio, "w", encoding="utf-8") as f:
+                    json.dump(json_data, f, indent=4)
             except Exception as e:
                 raise RuntimeError(f"Erro ao escrever o arquivo JSON: {e}")
 
@@ -159,13 +159,21 @@ class WriterService:
 
     @staticmethod
     def save_message(json_message):
-        ''' metodo para salvar uma mensagem em um arquivo txt com o nome do cliente conversado'''
+        ''' Salva uma mensagem recebida no arquivo do remetente '''
+        if isinstance(json_message, str):
+            try:
+                json_message = json.loads(json_message)
+            except json.JSONDecodeError as e:
+                print(f"save_message: erro ao decodificar JSON: {e}")
+                return False
+
         if not isinstance(json_message, dict):
             print("save_message: json_message não é um dicionário")
             return False
 
-        if "from" not in json_message or "body" not in json_message:
-            print("save_message: json_message precisa ter as chaves 'from' e 'body'")
+        required_keys = {"type", "from", "to", "body", "date", "time"}
+        if not required_keys.issubset(json_message.keys()):
+            print("save_message: json_message está faltando campos obrigatórios")
             return False
 
         sender = str(json_message["from"])
@@ -179,13 +187,22 @@ class WriterService:
 
     @staticmethod
     def save_own_message(json_message):
-        ''' precisava-se de um metodo proprio para salvar as proprias mensagens no historico'''
+        ''' Salva uma mensagem enviada no arquivo do destinatário '''
+        if isinstance(json_message, str):
+            try:
+                json_message = json.loads(json_message)
+            except json.JSONDecodeError as e:
+                print(f"save_own_message: erro ao decodificar JSON: {e}")
+                return False
+
         if not isinstance(json_message, dict):
-            print("save_message: json_message não é um dicionário")
+            print("save_own_message: json_message não é um dicionário")
             return False
 
-        if "from" not in json_message or "body" not in json_message:
-            print("save_message: json_message precisa ter as chaves 'from' e 'body'")
+        required_keys = {"type", "from", "to", "body", "date", "time"}
+        if not required_keys.issubset(json_message.keys()):
+            print("save_own_message: json_message está faltando campos obrigatórios")
+            print(json_message)
             return False
 
         sender = str(json_message["from"])

@@ -4,6 +4,11 @@ from ..service import WriterService
 import os
 from ..view import ask_username
 from .message_model import MessageModel
+from ..security import Keygen
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from base64 import b64encode, b64decode
+import base64
 
 class ClientModel:
     def __init__(self):
@@ -41,10 +46,9 @@ class ClientModel:
                 return
 
             try:
-                # chaves de teste
-                self.public_key = 456
-                self.private_key = 123
-                self.local_key = 789
+                # As chaves são criadas a partir do método com RSA
+                self.private_key, self.public_key = Keygen.generate_keys()
+                self.local_key = 2
 
                 # escreve um user.txt
                 WriterService.write_client(self.jsonify())
@@ -75,25 +79,43 @@ class ClientModel:
         try:
             if not self.socket:
                 raise ConnectionError("Socket não está conectado.")
+
+            # 1. Envia solicitação de login com MessageModel
+            hello = MessageModel("login", self.username, "server", "Hello server!")
+            print(hello.get_message())
+            self.socket.sendall(hello.get_message().encode())
+
+           
+            challenge_b64 = self.socket.recv(1024).decode()
+            challenge = base64.b64decode(challenge_b64)
+
+            # Carrega chave privada
+            private_key = serialization.load_pem_private_key(self.private_key.encode(), password=None)
+            signature = private_key.sign(challenge, padding.PKCS1v15(), hashes.SHA256())
+
             
-            test = "Hello server!"
-            cript_test = test
-            message = MessageModel("login", self.username ,"server", cript_test)
-            self.socket.sendall(message.get_message().encode())
+            self.socket.sendall(base64.b64encode(signature))
 
-            response = self.socket.recv(1024).decode()
-            message = MessageModel.receive_data(response)
-
-            if message["type"] == "erro":
-                raise ConnectionError("Erro na identificacao do servidor.")
+            
+            result = self.socket.recv(1024).decode()
+            if result == "OK":
+                print("Login aceito!")
+            else:
+                raise ConnectionError("Login recusado pelo servidor.")
 
         except Exception as e:
             print(f"Erro no login: {e}")
             self.disconnect()
 
+
     def sign_up(self):
         try:
-            message = MessageModel("sign up", self.username, "server", self.public_key)
+            # Se a chave for bytes, decodifique para string
+            pubkey_str = self.public_key
+            if isinstance(self.public_key, bytes):
+                pubkey_str = self.public_key.decode('utf-8')
+
+            message = MessageModel("sign up", self.username, "server", pubkey_str)
             self.socket.sendall(message.get_message().encode())
 
             response = self.socket.recv(1024).decode()
@@ -103,7 +125,7 @@ class ClientModel:
                 raise ConnectionError("Erro no cadastro do servidor.")
 
         except Exception as e:
-            print(f"Erro no login: {e}")
+            print(f"Erro no cadastro: {e}")
             self.disconnect()  
 
     def disconnect(self):
@@ -128,7 +150,7 @@ class ClientModel:
     
     def jsonify(self):
         data = {
-            "username" : self.username,
+            "username": self.username,
             "private_key": self.private_key,
             "public_key": self.public_key,
             "local_key": self.local_key
