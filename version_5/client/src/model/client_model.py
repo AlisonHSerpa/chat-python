@@ -8,6 +8,7 @@ from ..security import Keygen
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from base64 import b64encode, b64decode
+import base64
 
 class ClientModel:
     def __init__(self):
@@ -47,6 +48,7 @@ class ClientModel:
             try:
                 # As chaves são criadas a partir do método com RSA
                 self.private_key, self.public_key = Keygen.generate_keys()
+                self.local_key = 2
 
                 # escreve um user.txt
                 WriterService.write_client(self.jsonify())
@@ -78,41 +80,28 @@ class ClientModel:
             if not self.socket:
                 raise ConnectionError("Socket não está conectado.")
 
-            # 1. Envia solicitação de login
+            # 1. Envia solicitação de login com MessageModel
             hello = MessageModel("login", self.username, "server", "Hello server!")
+            print(hello.get_message())
             self.socket.sendall(hello.get_message().encode())
 
-            # 2. Recebe o desafio (test)
-            response = self.socket.recv(1024).decode()
-            json_data = MessageModel.receive_data(response)
-            challenge = json_data["body"]
+           
+            challenge_b64 = self.socket.recv(1024).decode()
+            challenge = base64.b64decode(challenge_b64)
 
-            # 3. Converte chave privada de string PEM para objeto
-            private_key = serialization.load_pem_private_key(
-                self.private_key.encode(),  # sua chave deve estar em string PEM
-                password=None
-            )
+            # Carrega chave privada
+            private_key = serialization.load_pem_private_key(self.private_key.encode(), password=None)
+            signature = private_key.sign(challenge, padding.PKCS1v15(), hashes.SHA256())
 
-            # 4. Cria assinatura digital do desafio
-            signature = private_key.sign(
-                challenge.encode() if isinstance(challenge, str) else challenge,
-                padding.PKCS1v15(),
-                hashes.SHA256()
-            )
+            
+            self.socket.sendall(base64.b64encode(signature))
 
-            # 5. Envia resposta assinada (em base64)
-            encoded_signature = b64encode(signature).decode()
-            answer = MessageModel("login", self.username, "server", encoded_signature)
-            self.socket.sendall(answer.get_message().encode())
-
-            # 6. Recebe permissão final do servidor
-            response = self.socket.recv(1024).decode()
-            permission = MessageModel.receive_data(response)
-
-            if permission["type"] == "erro":
-                raise ConnectionError("Servidor reprovou o teste da chave.")
-
-            print("Login bem-sucedido!")
+            
+            result = self.socket.recv(1024).decode()
+            if result == "OK":
+                print("Login aceito!")
+            else:
+                raise ConnectionError("Login recusado pelo servidor.")
 
         except Exception as e:
             print(f"Erro no login: {e}")
@@ -121,7 +110,12 @@ class ClientModel:
 
     def sign_up(self):
         try:
-            message = MessageModel("sign up", self.username, "server", self.public_key)
+            # Se a chave for bytes, decodifique para string
+            pubkey_str = self.public_key
+            if isinstance(self.public_key, bytes):
+                pubkey_str = self.public_key.decode('utf-8')
+
+            message = MessageModel("sign up", self.username, "server", pubkey_str)
             self.socket.sendall(message.get_message().encode())
 
             response = self.socket.recv(1024).decode()
@@ -131,7 +125,7 @@ class ClientModel:
                 raise ConnectionError("Erro no cadastro do servidor.")
 
         except Exception as e:
-            print(f"Erro no login: {e}")
+            print(f"Erro no cadastro: {e}")
             self.disconnect()  
 
     def disconnect(self):
@@ -156,7 +150,7 @@ class ClientModel:
     
     def jsonify(self):
         data = {
-            "username" : self.username,
+            "username": self.username,
             "private_key": self.private_key,
             "public_key": self.public_key,
             "local_key": self.local_key

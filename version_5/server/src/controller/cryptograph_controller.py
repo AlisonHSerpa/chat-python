@@ -1,13 +1,12 @@
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from base64 import b64decode
-from ..repository import Repository
 
 class Cryptograph:
     @staticmethod
-    def verify_signature(username, signed_body, original_challenge):
+    def verify_signature(repository ,username, signed_body, original_challenge):
         # Pega os dados do cliente (chave pública salva em formato PEM)
-        data = Repository.get_client_by_username(username)
+        data = repository.get_client_by_username(username)
         pem_public_key = data["key"].encode()
 
         # Carrega a chave pública

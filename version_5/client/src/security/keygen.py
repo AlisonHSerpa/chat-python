@@ -15,7 +15,7 @@ class Keygen:
     # O código abaixo lê o arquivo de parâmetros para a geração de chaves
     @staticmethod
     def get_parameters():
-        with open("version_5\client\src\security\dh_params.pem", "rb") as f:
+        with open("version_5/client/src/security/dh_params.pem", "rb") as f:
             parameters = load_pem_parameters(f.read())
         return parameters
 
@@ -29,12 +29,12 @@ class Keygen:
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption()  # ou com senha
-        )
+        ).decode('utf-8')
         
         pem_pub = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-        )
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        ).decode('utf-8')
 
         # As chaves são retornadas em formato PEM, que em torno é armazenado em um formato PEM. 
         return pem_priv, pem_pub
