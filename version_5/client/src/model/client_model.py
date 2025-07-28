@@ -4,6 +4,7 @@ from ..service import WriterService
 import os
 from ..view import ask_username
 from .message_model import MessageModel
+from ..security import Keygen
 
 class ClientModel:
     def __init__(self):
@@ -41,10 +42,8 @@ class ClientModel:
                 return
 
             try:
-                # chaves de teste
-                self.public_key = 456
-                self.private_key = 123
-                self.local_key = 789
+                # As chaves são criadas a partir do método com RSA
+                self.private_key, self.public_key = Keygen.generate_keys()
 
                 # escreve um user.txt
                 WriterService.write_client(self.jsonify())
