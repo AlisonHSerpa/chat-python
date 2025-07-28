@@ -6,6 +6,8 @@ from ..model import *
 from ..repository import *
 from .message_controller import MessageController
 from socket import socket, AF_INET, SOCK_STREAM
+import os
+from .cryptograph_controller import Cryptograph
 
 class ServerController:
     def __init__(self):
@@ -23,41 +25,19 @@ class ServerController:
             cliente = None  # inicializa para evitar UnboundLocalError
 
             if mensagem["type"] == "login":
-                dict = self.repository.get_client_by_username(mensagem["from"])
-                if not dict:
-                    response = MessageModel("erro", "server", mensagem["from"], "usuario nao existe")
-                    client_socket.sendall(response.get_message().encode())
-                    client_socket.close()
-                    return None
-
-                if mensagem["body"] == "Hello server!":
-                    response = MessageModel("autorized", "server", mensagem["from"], "")
-                    client_socket.sendall(response.get_message().encode())
-
-                    # Cria o modelo do cliente conectado
-                    cliente = ClientModel(dict["username"], client_socket, client_address, dict["key"])
-
-                    # verificar se ele tem mensagens pendentes
-                    self.message_controller.retreive_old_messages(cliente)
-                else:
-                    response = MessageModel("erro", "server", mensagem["from"], "falha na autenticacao")
-                    client_socket.sendall(response.get_message().encode())
-                    client_socket.close()
-                    return None
+                cliente = self.login_client(mensagem,client_socket,client_address)
 
             elif mensagem["type"] == "sign up":
-                dto = ClienteDTO(mensagem["from"], mensagem["body"])
-                self.repository.insert_client(dto.make_json())
-
-                response = MessageModel("autorized", "server", mensagem["from"], "")
-                client_socket.sendall(response.get_message().encode())
-
-                cliente = ClientModel(mensagem["from"], client_socket, client_address, mensagem["body"])
+                cliente = self.login_client(mensagem,client_socket,client_address)
 
             else:
                 client_socket.close()
                 return None
 
+            if cliente is None:
+                client_socket.close()
+                return None
+        
             self.model.clients.append(cliente)
             return cliente
 
@@ -66,7 +46,51 @@ class ServerController:
             client_socket.close()
             return None
 
-    
+    def login_client(self, mensagem, client_socket, client_address):
+        dict = self.repository.get_client_by_username(mensagem["from"])
+        
+        if not dict:
+            response = MessageModel("erro", "server", mensagem["from"], "usuario nao existe")
+            client_socket.sendall(response.get_message().encode())
+            client_socket.close()
+            return None
+
+        if mensagem["body"] == "Hello server!":
+            #cria o teste
+            test = os.urandom(16)
+
+            #envia o teste
+            response = MessageModel("test", "server", mensagem["from"], test)
+            client_socket.sendall(response.get_message().encode())
+
+            #recebe o teste
+            data = client_socket.recv(1500).decode()
+            mensagem2 = json.loads(data)
+
+            #descriptografa
+            if test == Cryptograph.verify_signature(mensagem2["from"], mensagem2["body"], test):
+                # Cria o modelo do cliente conectado
+                cliente = ClientModel(dict["username"], client_socket, client_address, dict["key"])
+
+                # verificar se ele tem mensagens pendentes
+                self.message_controller.retreive_old_messages(cliente)
+                return cliente
+        else:
+            response = MessageModel("erro", "server", mensagem["from"], "falha na autenticacao")
+            client_socket.sendall(response.get_message().encode())
+            client_socket.close()
+            return None
+
+    def sign_up_client(self, mensagem, client_socket, client_address):
+        dto = ClienteDTO(mensagem["from"], mensagem["body"])
+        self.repository.insert_client(dto.make_json())
+
+        response = MessageModel("autorized", "server", mensagem["from"], "")
+        client_socket.sendall(response.get_message().encode())
+
+        cliente = ClientModel(mensagem["from"], client_socket, client_address, mensagem["body"])
+        return cliente
+
     def connection_request_loop(self):
         """Aceita novas conexões de clientes"""
         try:

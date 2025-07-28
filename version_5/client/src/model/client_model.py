@@ -5,6 +5,9 @@ import os
 from ..view import ask_username
 from .message_model import MessageModel
 from ..security import Keygen
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from base64 import b64encode, b64decode
 
 class ClientModel:
     def __init__(self):
@@ -74,21 +77,47 @@ class ClientModel:
         try:
             if not self.socket:
                 raise ConnectionError("Socket não está conectado.")
-            
-            test = "Hello server!"
-            cript_test = test
-            message = MessageModel("login", self.username ,"server", cript_test)
-            self.socket.sendall(message.get_message().encode())
 
+            # 1. Envia solicitação de login
+            hello = MessageModel("login", self.username, "server", "Hello server!")
+            self.socket.sendall(hello.get_message().encode())
+
+            # 2. Recebe o desafio (test)
             response = self.socket.recv(1024).decode()
-            message = MessageModel.receive_data(response)
+            json_data = MessageModel.receive_data(response)
+            challenge = json_data["body"]
 
-            if message["type"] == "erro":
-                raise ConnectionError("Erro na identificacao do servidor.")
+            # 3. Converte chave privada de string PEM para objeto
+            private_key = serialization.load_pem_private_key(
+                self.private_key.encode(),  # sua chave deve estar em string PEM
+                password=None
+            )
+
+            # 4. Cria assinatura digital do desafio
+            signature = private_key.sign(
+                challenge.encode() if isinstance(challenge, str) else challenge,
+                padding.PKCS1v15(),
+                hashes.SHA256()
+            )
+
+            # 5. Envia resposta assinada (em base64)
+            encoded_signature = b64encode(signature).decode()
+            answer = MessageModel("login", self.username, "server", encoded_signature)
+            self.socket.sendall(answer.get_message().encode())
+
+            # 6. Recebe permissão final do servidor
+            response = self.socket.recv(1024).decode()
+            permission = MessageModel.receive_data(response)
+
+            if permission["type"] == "erro":
+                raise ConnectionError("Servidor reprovou o teste da chave.")
+
+            print("Login bem-sucedido!")
 
         except Exception as e:
             print(f"Erro no login: {e}")
             self.disconnect()
+
 
     def sign_up(self):
         try:
