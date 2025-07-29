@@ -4,7 +4,7 @@ from ..service import WriterService
 import os
 from ..view import ask_username
 from .message_model import MessageModel
-from ..security import Keygen
+from ..security.keygen import Keygen
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from base64 import b64encode, b64decode
@@ -31,8 +31,8 @@ class ClientModel:
 
             # retira os dados que ja existem
             self.username = data["username"]
-            self.private_key = data["private_key"]
-            self.public_key = data["public_key"]
+            self.private_key = data["private_key"].encode('utf-8')  # Aqui a chave é re-codificada para bytes.
+            self.public_key = data["public_key"].encode('utf-8')  # Aqui a chave é re-codificada para bytes.
             self.local_key = data["local_key"]
 
             # faz login
@@ -47,7 +47,11 @@ class ClientModel:
 
             try:
                 # As chaves são criadas a partir do método com RSA
-                self.private_key, self.public_key = Keygen.generate_keys()
+                priv_coded_key, pub_coded_key = Keygen.generate_rsa_keys()
+                self.private_key = priv_coded_key.decode('utf-8')  # Aqui a chave
+                # é decodada para string, pois o WriterService espera uma string serializada. Quando for necessário,
+                # a chave será convertida de volta para bytes.
+                self.public_key = pub_coded_key.decode('utf-8') 
                 self.local_key = 2
 
                 # escreve um user.txt

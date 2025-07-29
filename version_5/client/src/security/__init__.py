@@ -1,6 +1,6 @@
-from .keygen import Keygen
+from .keygen import Translate_Pem
 from .encrypt_rsa import encrypt_rsa
-from .translate_pem import translate_pem
-from .diffie_helman import diffie_helman
+from .translate_pem import Translate_Pem
+from .diffie_helman import Diffie_Helman
 
-__all__ = ['Keygen', 'encrypt_rsa', 'translate_pem', 'diffie_helman']
+__all__ = ['Translate_Pem', 'encrypt_rsa', 'Translate_Pem', 'Diffie_Helman']

@@ -3,7 +3,7 @@ import os
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-class DiffieHelman:
+class Diffie_Helman:
     # Esta classe é responsável por implementar o algoritmo Diffie-Hellman, que permite a troca 
     # segura de chaves criptográficas entre duas partes, para a obtenção de uma chave compartilhada.
     # Também é responsável por gerar o salt, que é usado para derivar a chave compartilhada. 

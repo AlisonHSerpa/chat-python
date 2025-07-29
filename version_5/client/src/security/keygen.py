@@ -2,6 +2,7 @@
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import load_pem_parameters
+from .translate_pem import Translate_Pem
 
 class Keygen:
 
@@ -16,9 +17,9 @@ class Keygen:
         public_key = private_key.public_key()
 
         # As chaves são convertida para o formato PEM, que é um formato de texto legível por humanos.
-        pem_priv = Keygen.rsa_chave_para_pem(private_key)
+        pem_priv = Translate_Pem.chave_para_pem(private_key)
         
-        pem_pub = Keygen.rsa_chave_para_pem(public_key)
+        pem_pub = Translate_Pem.chave_para_pem(public_key)
 
         # As chaves são retornadas em formato PEM para serem armazenadas em um arquivo PEM. 
         return pem_priv, pem_pub
@@ -40,7 +41,7 @@ class Keygen:
     # A chave privada é inserida na função Diffie-Helman e a pública é enviada para o destinatário via socket.
     @staticmethod
     def generate_temporary_keys():
-        parameters = Keygen.get_parameters() # lê os parâmetros do arquivo de quem começou a sessão
+        parameters = Translate_Pem.get_parameters() # lê os parâmetros do arquivo de quem começou a sessão
         private_key = dh.generate_private_key(parameters) # Gera a chave privada temporária
         public_key = private_key.public_key() # Gera a chave pública temporária
 
