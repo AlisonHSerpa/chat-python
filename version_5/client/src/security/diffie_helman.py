@@ -24,11 +24,17 @@ class Diffie_Helman:
     def diffie_Helman(temp_private_key, temp_peer_public_key, Salt):
         # A chave compartilhada é gerada a partir da chave privada do usuário e da chave pública do destinatário.
         shared_key = temp_private_key.exchange(temp_peer_public_key)
-        # A chave compartilhada é derivada usando HKDF para criar uma chave de 32 bytes.
+        # A chave compartilhada é derivada usando HKDF, com o Salt, para criar uma chave de 64 bytes.
         derived_key = HKDF(
             algorithm=hashes.SHA256(),
             length=64,
             salt=Salt,
             info=b'handshake data'
         ).derive(shared_key)
-        return derived_key
+        
+        # A chave derivada é, então, separada em duas partes: a chave de encriptação e a chave de autenticação.
+        encryption_key = derived_key[:32]  # Primeiros 32 bytes para encriptação
+        hmac_key = derived_key[32:]  # Últimos 32 bytes para autenticação 
+        
+        return  encryption_key, hmac_key # Retorna a chave de encriptação, a chave de autenticação  
+    
