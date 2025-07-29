@@ -12,29 +12,24 @@ import base64
 
 class Keygen:
 
-    # O código abaixo lê o arquivo de parâmetros para a geração de chaves
-    @staticmethod
-    def get_parameters():
-        with open("version_5/client/src/security/dh_params.pem", "rb") as f:
-            parameters = load_pem_parameters(f.read())
-        return parameters
+
 
     # O código abaixo gera as chave privada e pública PERSISTENTES que serão usadas para o diffie-helman posteriormente.
     @staticmethod
     def generate_keys():
-        private_key = rsa.generate_private_key(65537, 2048) # Olhar na documentação o tamanho da chave e etc
+        private_key = rsa.generate_private_key(65537, 2048) # Expoente é um número primo que é usado para o cálculo, 2048 é o tamanho da chave criada
         public_key = private_key.public_key()
 
         pem_priv = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()  # ou com senha
-        ).decode('utf-8')
+            encryption_algorithm=serialization.NoEncryption()  
+        )
         
         pem_pub = public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
-        ).decode('utf-8')
+        )
 
         # As chaves são retornadas em formato PEM, que em torno é armazenado em um formato PEM. 
         return pem_priv, pem_pub
@@ -54,52 +49,57 @@ class Keygen:
     def receive_public_key(pem_public_key):
         public_key = serialization.load_pem_public_key(pem_public_key)
         return public_key
-
-    # TODO: Ler o arquivo e separar as funções de chave assimétrica do RSA e diferenciar a 
-    # função do Diffie_Helman com os segredos.
-
-    # TODO: Servidor irá enviar um número que será encriptado pela chave privada do usuário e 
-    # descriptada pela chave pública presente no servidor
-
-    # Obtém ambas as chaves e decodifica em formato string UTF-8 para passar para o 
-    # Writer Service armazenar ambas as chaves.
+   
+   
+   
+   
+   
+   
+   
+    # O código abaixo lê o arquivo de parâmetros para a geração de chaves
     @staticmethod
-    def get_private_key(private_key):
-        pem_bytes = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
+    def get_parameters():
+        with open("version_5/client/src/security/dh_params.pem", "rb") as f:
+            parameters = load_pem_parameters(f.read())
+        return parameters
+    # Os parâmetros fazem parte do cálculo do Diffie-Hellman, que é usado para gerar chaves compartilhadas entre dois usuários.
+
+   
+   
+   
+   
+   
+   
+   
+    # Este método recebe uma chave pública do destinatário e a usa encriptar dados. É usado no Diffie-Hellman para enviar os dados que resultam na chave compartilhada. 
+    # VOU ASSUMIR QUE no servidor a chave será armazenada em binário, então ele só recebe o conteúdo da chave pública e a usa diretamente, sem precisar de conversão.
+    @staticmethod
+    def encrypt_with_public_key(peer_public_key, message):
+        # A mensagem é encriptada com a chave pública do destinatário.
+        ciphertext = peer_public_key.encrypt(
+            message,
+            padding=serialization.OAEP(
+                mgf=serialization.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
         )
-        return pem_bytes.decode('utf-8') # Transforma a chave em bytes.
+        return ciphertext
 
+    # Este método recebe uma chave privada do usuário e a usa para descriptografar dados. É usado no Diffie-Hellman. 
+    # Neste caso, a chave privada é recebida em formato PEM e convertida para o objeto de chave privada. 
     @staticmethod
-    def get_public_key(private_key):
-        pem_bytes = private_key.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
+    def decrypt_with_private_key(pem_private_key, ciphertext):
+        # A chave privada é carregada a partir do conteúdo PEM.
+        private_key = Keygen.receive_private_key(pem_private_key)
+        # A mensagem é descriptografada com a chave privada do usuário.
+        plaintext = private_key.decrypt(
+            ciphertext,
+            padding=serialization.OAEP(
+                mgf=serialization.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None
+            )
         )
-        return pem_bytes.decode('utf-8') # Transforma a chave em bytes.
-    
-    # A função abaixo irá fazer o cálculo da chave compartilhada
-    @staticmethod
-    def create_shared_key(A, B):
-        # Faz o exchange entre as chaves privada e pública (do outro cliente) para obter a compartilhada.
-        shared_key = A.exchange(B)
-        # Deriva a chave compartilhada para ser usada como chave simétrica.
-        derived_key = HKDF(
-            algorithm=hashes.SHA256(),
-            length=64,
-            salt=None,
-            info=b'handshake data',
-        ).derive(shared_key)
-
-        chave_encript = derived_key[:32] # Para o AES-256
-        chave_hmac = derived_key[32:] # HMAC-SHA256
-
-        # Como ambas as chaves serão salvas como texto, é necessário decodificá-las para base64.
-        encript_b64 = base64.urlsafe_b64encode(chave_encript).decode("utf-8")
-        hmac_b64 = base64.urlsafe_b64encode(chave_hmac).decode("utf-8")
-        # Para retorná-las ao estado normal, basta refazer o processo ao contrário (trocar encode por decode e vice-versa).
-
-        # Como a chave derivada se divide em duas, a função as retornará como uma tupla.
-        return encript_b64, hmac_b64
+        return plaintext
+   
