@@ -1,7 +1,6 @@
 # version_5/client/src/security/keygen.py
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.serialization import load_pem_parameters
 from .translate_pem import Translate_Pem
 
 class Keygen:
@@ -23,27 +22,4 @@ class Keygen:
 
         # As chaves são retornadas em formato PEM para serem armazenadas em um arquivo PEM. 
         return pem_priv, pem_pub
-    
-   
-    '''# O código abaixo lê o arquivo de parâmetros para a geração de chaves.
-    # Os parãmetros são usados para o Diffie-Hellman, que é um protocolo de troca de chaves.
-    # O arquivo de parâmetros deve ser gerado previamente e armazenado no diretório especificado.
-    # Os parâmetros são sempre 2 e 2048, mas eles sempre serão gerados por quem iniciou a sessão.'''
-    @staticmethod
-    def get_parameters():
-        with open("version_5/client/src/security/dh_params.pem", "rb") as f:
-            parameters = load_pem_parameters(f.read())
-        return parameters
-    
-    '''# O código abaixo gera uma chave privada e pública temporária para o Diffie-Hellman.
-    # A chave privada é gerada a partir dos parâmetros lidos do arquivo e 
-    # a chave pública é gerada a partir da chave privada. 
-    # A chave privada é inserida na função Diffie-Helman e a pública é enviada para o destinatário via socket.'''
-    @staticmethod
-    def generate_temporary_keys():
-        parameters = Translate_Pem.get_parameters() # lê os parâmetros do arquivo de quem começou a sessão
-        private_key = dh.generate_private_key(parameters) # Gera a chave privada temporária
-        public_key = private_key.public_key() # Gera a chave pública temporária
-
-        return private_key, public_key
     
