@@ -1,7 +1,7 @@
 # version_5/client/src/controller/session_controller.py
-from ..service.writer_service import WriterService
-from ..security.encrypt_rsa import EncryptionRSA
-from ..model.session_key import SessionKey
+from ..service import WriterService
+from ..security import EncryptionRSA
+from ..model import SessionKey
 import base64
 
 class SessionController:
@@ -53,7 +53,8 @@ class SessionController:
                 parametros = None
                 salt = None
             # Armazena os dados no SessionKey
-            SessionKey.set_session_key(parametros, salt, chave_publica)
+            pem_public_key = SessionKey.set_session_key(parametros, salt, chave_publica)
+            SessionController.enviar_chave_publica(None,None,pem_public_key)
             
  
         except Exception as e:
@@ -78,15 +79,17 @@ class SessionController:
     sessão, OU após receber os parâmetros e o Salt do destinatário.'''
 
     @staticmethod
-    def enviar_chave_publica(parameters: bytes, salt: bytes, public_key: bytes):
+    def enviar_chave_publica(parameters: bytes, salt: bytes, pem_public_key: bytes):
         if not parameters and not salt:
             print("Parâmetros ou salt não fornecidos, será enviada apenas a chave pública.")
-            
-            return
-        elif parameters is not None and salt is not None and public_key is not None:
+            b64_public_key =  base64.b64encode(pem_public_key)
+
+            mensagem = b64_public_key.encode('utf-8')
+
+        elif parameters is not None and salt is not None and pem_public_key is not None:
             # Prepara os dados para envio, codificando em base64, depois juntando com o separador "<SEP>"
             # e, por fim, convertendo para string.
-            mensagem = SessionController.preparar_envio(parameters, salt, public_key)
+            mensagem = SessionController.preparar_envio(parameters, salt, pem_public_key)
 
             # Logo após, a mensagem deve ser encriptada com a chave pública rsa do destinatário.
             # TODO: Ainda não há implementação para armazenar a chave pública do destinatário.

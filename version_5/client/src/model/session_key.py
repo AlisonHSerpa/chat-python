@@ -49,15 +49,8 @@ class SessionKey:
             # Gera a chave de sessão usando os parâmetros e o salt fornecidos
             private_key, public_key = Diffie_Helman.generate_temporary_keys(parameters)
 
-            # Envia a chave pública que acabou de ser gerada para o destinatário
-            try:
-                pem_public_key = Translate_Pem.public_key_to_pem(public_key)
-                SessionController.enviar_chave_publica(parameters, salt, pem_public_key)
+            pem_public_key = Translate_Pem.chave_para_pem(public_key)
                 
-            except Exception as e:
-                print(f"Erro ao enviar a chave pública: {e}")
-                return
-
             # Gera a chave de sessão usando a chave privada temporária e a chave pública do destinatário.
             aes_key, hmac_key = Diffie_Helman.diffie_Helman(private_key, peer_public_key, salt)
 
@@ -67,7 +60,7 @@ class SessionKey:
             SessionKey.set_dh_private_key(None)  # Define a chave privada como None após ser usada.
             SessionKey.save_session()  # Salva a sessão com as novas chaves.
             print("Chave de sessão gerada com sucesso.")
-            return
+            return pem_public_key
 
         else:
             print("Informações incompletas, não é possível gerar a chave de sessão.")
@@ -82,6 +75,9 @@ class SessionKey:
 
     def get_dh_private_key(self):
         return self.dh_private_key
+    
+    def set_dh_private_key(self, dh_private_key):
+        self.dh_private_key = dh_private_key
 
     # Retorna o salt.
     def get_salt(self):
