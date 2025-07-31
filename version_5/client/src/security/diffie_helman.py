@@ -1,4 +1,3 @@
-import base64
 import os
 from cryptography.hazmat.primitives.serialization import load_pem_parameters
 from cryptography.hazmat.primitives import hashes
@@ -43,7 +42,7 @@ class Diffie_Helman:
     dados de forma segura.
     O método recebe tanto as chaves quanto o Salt, que é usado para derivar a chave compartilhada.'''
     @staticmethod
-    def diffie_Helman(temp_private_key, temp_peer_public_key, Salt):
+    def diffie_Helman(temp_private_key: bytes, temp_peer_public_key: bytes, Salt: bytes):
         # A chave compartilhada é gerada a partir da chave privada do usuário e da chave pública do destinatário.
         shared_key = temp_private_key.exchange(temp_peer_public_key)
         # A chave compartilhada é derivada usando HKDF, com o Salt, para criar uma chave de 64 bytes.
@@ -55,8 +54,8 @@ class Diffie_Helman:
         ).derive(shared_key)
         
         # A chave derivada é, então, separada em duas partes: a chave de encriptação e a chave de autenticação.
-        encryption_key = derived_key[:32]  # Primeiros 32 bytes para encriptação
+        aes_key = derived_key[:32]  # Primeiros 32 bytes para encriptação
         hmac_key = derived_key[32:]  # Últimos 32 bytes para autenticação 
         
-        return  encryption_key, hmac_key # Retorna a chave de encriptação, a chave de autenticação  
+        return  aes_key, hmac_key # Retorna a chave de encriptação, a chave de autenticação  
     
