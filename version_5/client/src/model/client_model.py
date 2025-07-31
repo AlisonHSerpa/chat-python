@@ -39,24 +39,12 @@ class ClientModel:
             self.login()
 
         else:
-            self.username = ask_username()  # Chama a janela gráfica
-        
-            if not self.username:
-                print("Nenhum nome foi digitado.")
-                return
+            # As chaves são criadas a partir do método com RSA
+            self.private_key, self.public_key = Keygen.generate_keys()
+            self.local_key = 2
 
-            try:
-                # As chaves são criadas a partir do método com RSA
-                self.private_key, self.public_key = Keygen.generate_keys()
-                self.local_key = 2
-
-                # escreve um user.txt
-                WriterService.write_client(self.jsonify())
-
-                # cadastra no servidor
-                self.sign_up()
-            except Exception as e:
-                print(f"erro ao criar um usuario: {e}")
+            # cadastra no servidor
+            self.sign_up()
 
 
     def connect_to_server(self, host='127.0.0.1', port=8000):
@@ -70,6 +58,9 @@ class ClientModel:
             # Primeira ação ao conectar: dizer quem eh para o servidor
             self.start_client()
             
+            if not self.socket:
+                return
+                
             self.connected = True
         except Exception as e:
             print(e)
@@ -108,8 +99,15 @@ class ClientModel:
             self.disconnect()
 
 
-    def sign_up(self):
+    def sign_up(self, string = None):
         try:
+            self.username = ask_username(string)  # Chama a janela gráfica
+        
+            if not self.username:
+                print("username eh null")
+                self.disconnect()
+                return
+
             # Se a chave for bytes, decodifique para string
             pubkey_str = self.public_key
             if isinstance(self.public_key, bytes):
@@ -122,7 +120,10 @@ class ClientModel:
             message = MessageModel.receive_data(response)
 
             if message["type"] == "erro":
-                raise ConnectionError("Erro no cadastro do servidor.")
+                self.sign_up(message["body"])
+            elif message["type"] == "autorized":
+                # escreve um user.txt
+                WriterService.write_client(self.jsonify())
 
         except Exception as e:
             print(f"Erro no cadastro: {e}")

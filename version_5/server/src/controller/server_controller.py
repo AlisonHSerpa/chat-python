@@ -23,6 +23,10 @@ class ServerController:
         try:
             # Recebe o handshake de username
             data = client_socket.recv(1500).decode()
+
+            if not data.strip():  # string vazia ou só espaços
+                return None
+
             mensagem = json.loads(data)
 
             cliente = None  # inicializa para evitar UnboundLocalError
@@ -50,7 +54,7 @@ class ServerController:
             return None
 
     def login_client(self, mensagem, client_socket, client_address):
-        print("chegou a tentar fazer login")
+        print(f"{client_address} chegou a tentar fazer login")
 
         dict = self.repository.get_client_by_username(mensagem["from"])  # ✅
 
@@ -90,7 +94,12 @@ class ServerController:
             return None
 
     def sign_up_client(self, mensagem, client_socket, client_address):
-        print("chegou a tentar fazer cadastro")
+        print(f"{client_address} chegou a tentar fazer cadastro")
+        if not self.repository.get_client_by_username(mensagem["from"]) == None :
+            response = MessageModel("erro","server",mensagem["from"],"username já existe")
+            client_socket.sendall(response.get_message().encode())
+            return
+
         dto = ClienteDTO(mensagem["from"], mensagem["body"])
         client_data = dto.make_json()  # agora retorna dicionário
         self.repository.insert_client(client_data)

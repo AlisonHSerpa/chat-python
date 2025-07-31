@@ -7,20 +7,34 @@ from ..service import WriterService
 
 class ClientController:
     def __init__(self):
+        ''' inicia toda a aplicacao criando cliente, interface e conexoes'''
         self.chats = {}
         self.online_users = []
-        self.setup_mvc()
-
-    def setup_mvc(self):
-        ''' inicia toda a aplicacao criando cliente, interface e conexoes'''
-        
         self.model = ClientModel()
+        
+        if not self.model.connected:
+            print("cliente não iniciado")
+            raise ConnectionError("Não foi possível conectar ao servidor.")
+
         self.view = ClientView(self)
         
-        if not self.model.socket:
-            print("erro na criacao do cliente")
-            return
+        # Configura o listener para mensagens do servidor
+        self.start_listening()
+        
+        # Inicia o processamento de mensagens
+        self.view.after(100, self.process_messages)
 
+    def setup_mvc(self):
+        
+        
+        self.model = ClientModel()
+        
+        if not self.model.connected:
+            print("cliente não iniciado")
+            return 
+
+        self.view = ClientView(self)
+        
         # Configura o listener para mensagens do servidor
         self.start_listening()
         

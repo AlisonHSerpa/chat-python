@@ -1,5 +1,8 @@
 from src import create_client
 
 if __name__ == "__main__":
-    client = create_client()
-    client.run()
+    try:
+        client = create_client()
+        client.run()
+    except ConnectionError as e:
+        print(f"Encerrando aplicação: {e}")
