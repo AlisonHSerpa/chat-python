@@ -1,28 +1,101 @@
 import time
 import json
 from ..service import WriterService
+from ..security.diffie_helman import Diffie_Helman
+from ..security.translate_pem import Translate_Pem
+from ..controller.session_controller import SessionController
 
 # session key usa writerService para fazer autosave
 class SessionKey:
-    def __init__(self, key, username, expiration_seconds=3600, max_messages=100, valid=True):
+    def __init__(self, username, expiration_seconds=3600, max_messages=100, valid=True):
         self.username = username
-        self.key = key
+        self.aes_key, self.hmac_key = None  # Chaves para criptografia e verificação de integridade
+        self.salt = None
+        self.dh_private_key = None  # Chave privada temporária
         self.creation_time = time.time()
         self.expiration_seconds = expiration_seconds
         self.remaining_messages = max_messages
         self.valid = valid
         self.save_session()  # Salva imediatamente
 
-    # pode ser usado no __init__ para passar o valor da key
     @staticmethod
-    def generate_shared_key(A, B):
-        # Exemplo: substitua isso pela lógica real de DH se necessário
-        return A + B
+    def set_session_key(salt, parameters: bytes, peer_public_key: bytes):
+        if parameters is None and salt is None:
+            print("Parâmetros e salt não fornecidos, " \
+            "então a chave privada já foi gerada e o salt já está presente nas variáveis locais.")
+
+            salt = SessionKey.get_salt()  # Pega o salt da variável local.
+
+            private_key = SessionKey.get_dh_private_key()  # Pega a chave privada da variável local.
+            
+            # Gera a chave de sessão usando a chave privada temporária e a chave pública do destinatário.
+            aes_key, hmac_key = Diffie_Helman.diffie_Helman(private_key, peer_public_key, salt)
+
+            # Define as chaves AES e HMAC após o Diffie Helman ser usado.
+            set_keys(aes_key, hmac_key)  # Define as chaves AES e HMAC após o Diffie Helman ser usado.
+            
+            SessionKey.set_salt(None)  # Define o salt como None, pois já foi definido anteriormente.
+            
+            SessionKey.set_dh_private_key(None)  # Define a chave privada como None após ser usada.
+            
+            save_session()  # Salva a sessão com as novas chaves.
+            
+            print("Chave de sessão gerada com sucesso.")
+            return
+
+
+
+        elif parameters is not None and salt is not None:
+            # Gera a chave de sessão usando os parâmetros e o salt fornecidos
+            private_key, public_key = Diffie_Helman.generate_temporary_keys(parameters)
+
+            # Envia a chave pública que acabou de ser gerada para o destinatário
+            try:
+                pem_public_key = Translate_Pem.public_key_to_pem(public_key)
+                SessionController.enviar_chave_publica(parameters, salt, pem_public_key)
+                
+            except Exception as e:
+                print(f"Erro ao enviar a chave pública: {e}")
+                return
+
+            # Gera a chave de sessão usando a chave privada temporária e a chave pública do destinatário.
+            aes_key, hmac_key = Diffie_Helman.diffie_Helman(private_key, peer_public_key, salt)
+
+            # Define as chaves AES e HMAC após o Diffie Helman ser usado.
+            SessionKey.set_keys(aes_key, hmac_key)
+            SessionKey.set_salt(None)  # Define o salt como None, pois já foi definido anteriormente.
+            SessionKey.set_dh_private_key(None)  # Define a chave privada como None após ser usada.
+            SessionKey.save_session()  # Salva a sessão com as novas chaves.
+            print("Chave de sessão gerada com sucesso.")
+            return
+
+        else:
+            print("Informações incompletas, não é possível gerar a chave de sessão.")
+            return
+
+
+    # Define as chaves AES e HMAC após o Diffie Helman ser usado.
+    def set_keys(self, aes_key: bytes, hmac_key: bytes):
+        self.aes_key = aes_key
+        self.hmac_key = hmac_key
+        self.save_session()
+
+    def get_dh_private_key(self):
+        return self.dh_private_key
+
+    # Retorna o salt.
+    def get_salt(self):
+        return self.salt
+    
+    def set_salt(self, salt):
+        self.salt = salt
+        self.save_session()
 
     def to_json(self):
         return json.dumps({
             "username": self.username,
-            "key": self.key,
+            "aes_key": self.aes_key.decode('utf-8'),  # Chave AES em formato string
+            "hmac_key": self.hmac_key.decode('utf-8'),  # Chave HMAC em formato string
             "creation_time": self.creation_time,
             "expiration_seconds": self.expiration_seconds,
             "remaining_messages": self.remaining_messages,

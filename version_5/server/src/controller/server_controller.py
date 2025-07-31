@@ -56,8 +56,7 @@ class ServerController:
     def login_client(self, mensagem, client_socket, client_address):
         print(f"{client_address} chegou a tentar fazer login")
 
-        dict = self.repository.get_client_by_username(mensagem["from"])  # ✅
-
+        dict = self.repository.get_client_by_username(mensagem["from"])
         if not dict:
             response = MessageModel("erro", "server", mensagem["from"], "usuario nao existe")
             client_socket.sendall(response.get_message().encode())
@@ -66,26 +65,25 @@ class ServerController:
 
         if mensagem["body"] == "Hello server!":
             challenge = os.urandom(16)
-            client_socket.sendall(base64.b64encode(challenge))
+            client_socket.sendall(base64.b64encode(challenge))  # envia desafio codificado
 
-            signature_b64 = client_socket.recv(1024)
-            signature = base64.b64decode(signature_b64)
-
-            user_data = dict
-
-            # carregar chave pública
-            public_key = serialization.load_pem_public_key(user_data["key"].encode())
+            signature_b64_bytes = client_socket.recv(4096)  # buffer maior
+            signature_b64_str = signature_b64_bytes.decode()  # garante que seja string
+            print("Recebeu assinatura do cliente.")
 
             try:
-                public_key.verify(signature, challenge, padding.PKCS1v15(), hashes.SHA256())
-                client_socket.sendall(b"OK")
-                print(f"Usuário {mensagem['from']} autenticado!")
+                if Cryptograph.verify_signature(self.repository, mensagem["from"], signature_b64_str, challenge):
+                    client_socket.sendall(b"OK")
+                    print(f"Usuário {mensagem['from']} autenticado!")
 
-                cliente = ClientModel(mensagem["from"], client_socket, client_address, mensagem["body"])
-                return cliente
-            except Exception:
+                    cliente = ClientModel(mensagem["from"], client_socket, client_address, mensagem["body"])
+                    return cliente
+                else:
+                    client_socket.sendall(b"FAIL")
+                    print(f"Usuário {mensagem['from']} falhou autenticação.")
+            except Exception as e:
                 client_socket.sendall(b"FAIL")
-                print(f"Usuário {mensagem['from']} falhou autenticação.")
+                print(f"Erro na verificação de assinatura do usuário {mensagem['from']}: {e}")
 
         else:
             response = MessageModel("erro", "server", mensagem["from"], "falha na autenticacao")

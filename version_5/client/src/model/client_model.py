@@ -4,11 +4,12 @@ from ..service import WriterService
 import os
 from ..view import ask_username
 from .message_model import MessageModel
-from ..security import Keygen
-from cryptography.hazmat.primitives import serialization, hashes
+from ..security.keygen import Keygen
+from ..security.translate_pem import Translate_Pem
+from ..security.sign_message import Assinatura
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from base64 import b64encode, b64decode
-import base64
 
 class ClientModel:
     def __init__(self):
@@ -31,8 +32,9 @@ class ClientModel:
 
             # retira os dados que ja existem
             self.username = data["username"]
-            self.private_key = data["private_key"]
-            self.public_key = data["public_key"]
+            self.private_key = data["private_key"].encode('utf-8')  # Aqui a chave é re-codificada para bytes
+            # no momento que entra para as variáveis locais.
+            self.public_key = data["public_key"].encode('utf-8')  # Aqui a chave é re-codificada para bytes.
             self.local_key = data["local_key"]
 
             # faz login
@@ -66,6 +68,11 @@ class ClientModel:
             print(e)
             return str(e)
 
+    ''' Método para login no servidor
+    O login é feito através de uma assinatura digital do desafio enviado pelo servidor.
+    O desafio é assinado com a chave privada do usuário e a assinatura é enviada de volta ao servidor.
+    Se o servidor aceitar a assinatura, o login é bem-sucedido.
+    Caso contrário, o login falha e o usuário é desconectado.'''
     def login(self):
         try:
             if not self.socket:
@@ -76,19 +83,26 @@ class ClientModel:
             print(hello.get_message())
             self.socket.sendall(hello.get_message().encode())
 
-           
-            challenge_b64 = self.socket.recv(1024).decode()
-            challenge = base64.b64decode(challenge_b64)
+            # 2. Recebe o desafio do servidor    
+            challenge_b64 = self.socket.recv(1500).decode()
+            challenge = b64decode(challenge_b64)  # 3. Decodifica o desafio
 
-            # Carrega chave privada
-            private_key = serialization.load_pem_private_key(self.private_key.encode(), password=None)
-            signature = private_key.sign(challenge, padding.PKCS1v15(), hashes.SHA256())
-
+            # 4. Carrega chave privada
             
-            self.socket.sendall(base64.b64encode(signature))
+            private_key = Translate_Pem.receive_key(self.private_key)
+            print(private_key)
 
-            
-            result = self.socket.recv(1024).decode()
+            # 5. Assina o desafio com a chave privada
+            signature = Assinatura.sign_message(private_key, challenge)
+
+            # 6. Codifica e envia a assinatura de volta ao servidor
+            print("Enviando assinatura ao servidor...")
+            signature_b64 = b64encode(signature).decode()  # Transforma em string base64
+            self.socket.sendall(signature_b64.encode())  # Envia como string
+
+            # 7. Recebe a resposta do servidor
+            print("Aguardando resposta do servidor...")
+            result = self.socket.recv(1500).decode()
             if result == "OK":
                 print("Login aceito!")
             else:
@@ -110,9 +124,7 @@ class ClientModel:
 
             # Se a chave for bytes, decodifique para string
             pubkey_str = self.public_key
-            if isinstance(self.public_key, bytes):
-                pubkey_str = self.public_key.decode('utf-8')
-
+            
             message = MessageModel("sign up", self.username, "server", pubkey_str)
             self.socket.sendall(message.get_message().encode())
 
