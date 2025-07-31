@@ -10,7 +10,6 @@ from ..security.sign_message import Assinatura
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from base64 import b64encode, b64decode
-import base64
 
 class ClientModel:
     def __init__(self):
@@ -33,7 +32,8 @@ class ClientModel:
 
             # retira os dados que ja existem
             self.username = data["username"]
-            self.private_key = data["private_key"].encode('utf-8')  # Aqui a chave é re-codificada para bytes no momento que entra para as variáveis locais.
+            self.private_key = data["private_key"].encode('utf-8')  # Aqui a chave é re-codificada para bytes
+            # no momento que entra para as variáveis locais.
             self.public_key = data["public_key"].encode('utf-8')  # Aqui a chave é re-codificada para bytes.
             self.local_key = data["local_key"]
 
@@ -98,7 +98,7 @@ class ClientModel:
 
             # 2. Recebe o desafio do servidor    
             challenge_b64 = self.socket.recv(1500).decode()
-            challenge = base64.b64decode(challenge_b64)  # 3. Decodifica o desafio
+            challenge = b64decode(challenge_b64)  # 3. Decodifica o desafio
 
             # 4. Carrega chave privada
             
@@ -110,7 +110,7 @@ class ClientModel:
 
             # 6. Codifica e envia a assinatura de volta ao servidor
             print("Enviando assinatura ao servidor...")
-            signature_b64 = base64.b64encode(signature).decode()  # Transforma em string base64
+            signature_b64 = b64encode(signature).decode()  # Transforma em string base64
             self.socket.sendall(signature_b64.encode())  # Envia como string
 
             # 7. Recebe a resposta do servidor

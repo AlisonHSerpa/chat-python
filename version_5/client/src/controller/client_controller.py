@@ -4,6 +4,7 @@ import json
 from ..model import *
 from ..view import ClientView
 from ..service import WriterService
+from ..controller import SessionController
 
 class ClientController:
     def __init__(self):
@@ -57,6 +58,19 @@ class ClientController:
             if (message["to"] == self.model.username):
                 if (message["type"] == "message"):
                     WriterService.save_message(message)
+
+                elif (message["type"] == "session_key"): 
+                    '''Esse método é chamado para receber a chave pública do 
+                    destinatário para ser usada no Diffie-Hellman. Opcionalmente,
+                    pode receber o salt e os parãmetros se o remetente tiver iniciado a sessão.'''
+
+                    info = message["body"] # O body do json é armazenado em info.
+                    
+                    nome = message["from"] # O nome do remetente é armazenado em nome.
+                    
+                    SessionController.separar_dados_dh(info) # info é passado para o método que 
+                    # separa os dados do Diffie-Hellman.
+                
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
         # Agenda o próximo processamento
