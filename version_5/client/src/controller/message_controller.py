@@ -86,7 +86,7 @@ class MessageController:
         session_key = SessionKey(data["key"], data["username"], data["expiration_seconds"], data["remaining_messages"], data["valid"])
         
         # falta o processo de criar a chave de sessao caso ela nao existir
-
+        
         return session_key
 
     def stop(self):
