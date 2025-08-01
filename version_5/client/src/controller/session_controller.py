@@ -2,6 +2,7 @@
 from ..service import WriterService
 from ..security import EncryptionRSA
 from ..model import SessionKey
+from ..model import MessageModel
 import base64
 
 class SessionController:
@@ -13,7 +14,7 @@ class SessionController:
     '''A classe espera que os dados no Body, caso sejam os 3, sejam separados por "<SEP>", 
     e enviados na ordem ["parâmetros", "salt", "chave_pública"].'''
     @staticmethod
-    def separar_dados_dh(body: bytes):
+    def separar_dados_dh(body: bytes, sender_name: str):
         '''Esse método recebe o body da mensagem com a informação enviada pelo destinatário.
         A informação está encriptada com a chave pública do destinatário, então deve ser descriptografada
         com a chave privada do usuário.'''
@@ -54,18 +55,21 @@ class SessionController:
                 salt = None
             # Armazena os dados no SessionKey
             pem_public_key = SessionKey.set_session_key(parametros, salt, chave_publica)
-            SessionController.enviar_chave_publica(None,None,pem_public_key)
+
+            if pem_public_key is not None:
+                # Retorna a chave pública para o destinatário feita com os parâmetros gerados pelo mesmo.
+                return SessionController.enviar_chave_publica(None, None, pem_public_key, sender_name)
             
  
         except Exception as e:
             print(f"Erro ao receber dados (separar_dados_dh): {e}")
     
 
-    def preparar_envio(parameters: bytes, salt: bytes, public_key: bytes):
+    def preparar_envio(parameters: bytes, salt: bytes, pem_public_key: bytes):
         # Codifica os dados em base64 para enviar via socket
         parametros_b64 = base64.b64encode(parameters) 
         salt_b64 = base64.b64encode(salt)
-        chave_publica_b64 = base64.b64encode(public_key)
+        chave_publica_b64 = base64.b64encode(pem_public_key)
 
         # Junta os dados com o separador "<SEP>"
         data = f"{parametros_b64}<SEP>{salt_b64}<SEP>{chave_publica_b64}"
@@ -79,12 +83,38 @@ class SessionController:
     sessão, OU após receber os parâmetros e o Salt do destinatário.'''
 
     @staticmethod
-    def enviar_chave_publica(parameters: bytes, salt: bytes, pem_public_key: bytes):
+    def enviar_chave_publica(parameters: bytes, salt: bytes, pem_public_key: bytes, destiny_name: str):
+        # destiny_name é o nome do destinatário, que é o usuário com quem a sessão está sendo estabelecida.
         if not parameters and not salt:
             print("Parâmetros ou salt não fornecidos, será enviada apenas a chave pública.")
+             
             b64_public_key =  base64.b64encode(pem_public_key)
 
             mensagem = b64_public_key.encode('utf-8')
+
+            # TODO: Ainda não há implementação para armazenar a chave pública do destinatário.
+            peer_public_key = None  # Deve ser substituído pela chave pública do destinatário.
+
+            # Encripta a mensagem com a chave pública do destinatário
+            mensagem_encriptada = EncryptionRSA.encrypt_with_public_key(mensagem, peer_public_key)
+
+            # Após a mensagem ser encriptada, ela deve ser novamente encodada em base64 e utf-8, 
+            # para poder ser inserida no json da mensagem.
+            mensagem_encodada = base64.b64encode(mensagem_encriptada).decode('utf-8') 
+
+            # É também recebido o nome do remetente, para que a mensagem possa ser identificada.
+            user = WriterService.read_client()
+            origin_name = user["username"]
+
+            # Cria a mensagem com o tipo "session_key_response" e envia para o destinatário.
+            # A mensagem é criada com o nome do remetente, o nome do destinatário e o corpo da mensagem.
+            # O destino é o usuário com quem a sessão está sendo estabelecida, que primeiramente enviou os 
+            # parâmetros e o salt.
+            final_message = MessageModel("session_key_response", origin_name, destiny_name, mensagem_encodada)
+
+            # Retorna a mensagem para o client_controller, que irá enviar via socket.
+            return final_message
+
 
         elif parameters is not None and salt is not None and pem_public_key is not None:
             # Prepara os dados para envio, codificando em base64, depois juntando com o separador "<SEP>"
@@ -93,7 +123,8 @@ class SessionController:
 
             # Logo após, a mensagem deve ser encriptada com a chave pública rsa do destinatário.
             # TODO: Ainda não há implementação para armazenar a chave pública do destinatário.
+            peer_public_key = None  # Deve ser substituído pela chave pública do destinatário.
             
             # Envia os dados para o destinatário via socket
-            # TODO: Implementar o envio via socket, Alison disse que iria criar um método para 
-            # enviar mensagens de modo geral.
+            mensagem_encriptada = EncryptionRSA.encrypt_with_public_key(mensagem, peer_public_key)
+            

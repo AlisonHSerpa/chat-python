@@ -45,15 +45,20 @@ class ClientController:
 
                 elif (message["type"] == "session_key"): 
                     '''Esse método é chamado para receber a chave pública do 
-                    destinatário para ser usada no Diffie-Hellman. Opcionalmente,
-                    pode receber o salt e os parãmetros se o remetente tiver iniciado a sessão.'''
+                    destinatário, o salt e os parâmetros para serem usados no Diffie-Hellman.'''
 
-                    info = message["body"] # O body do json é armazenado em info.
+                    return_message = SessionController.separar_dados_dh(message["body"], message["nome"]) 
                     
-                    nome = message["from"] # O nome do remetente é armazenado em nome.
+                    # Enfim, é enviada a chave pública para o destinatário.
+                    self.model.socket.sendall(return_message.get_message().encode())
+
+                elif (message["type"] == "session_key_response"):
+                    '''Esse método é chamado para receber APENAS a chave pública do remetente.'''
+
+                    SessionController.separar_dados_dh(message["body"], message["nome"])
+
                     
-                    SessionController.separar_dados_dh(info) # info é passado para o método que 
-                    # separa os dados do Diffie-Hellman.
+
                 
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])

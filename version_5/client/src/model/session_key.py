@@ -8,6 +8,7 @@ from ..security.translate_pem import Translate_Pem
 class SessionKey:
     def __init__(self, username, expiration_seconds=3600, max_messages=100, valid=True):
         self.username = username
+        self.peer_username = None  # Nome do destinatário, para indicar o usuário com quem a sessão é estabelecida
         self.aes_key, self.hmac_key = None  # Chaves para criptografia e verificação de integridade
         self.salt = None
         self.dh_private_key = None  # Chave privada temporária
@@ -18,7 +19,7 @@ class SessionKey:
         self.save_session()  # Salva imediatamente
 
     @staticmethod
-    def set_session_key(salt, parameters: bytes, peer_public_key: bytes):
+    def set_session_key(salt, parameters: bytes, peer_public_key: bytes, nome: str):
         if parameters is None and salt is None:
             print("Parâmetros e salt não fornecidos, " \
             "então a chave privada já foi gerada e o salt já está presente nas variáveis locais.")
@@ -40,7 +41,7 @@ class SessionKey:
             save_session()  # Salva a sessão com as novas chaves.
             
             print("Chave de sessão gerada com sucesso.")
-            return
+            return None  # Retorna None, pois não há chave pública a ser retornada nesse caso.
 
 
 
@@ -63,7 +64,7 @@ class SessionKey:
 
         else:
             print("Informações incompletas, não é possível gerar a chave de sessão.")
-            return
+            return None  # Retorna None se não for possível gerar a chave de sessão.
 
 
     # Define as chaves AES e HMAC após o Diffie Helman ser usado.
