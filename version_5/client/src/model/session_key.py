@@ -97,6 +97,14 @@ class SessionKey:
     @staticmethod
     def send_aes_key():
         return SessionKey.get_aes_key()
+    
+    # Retorna a chave hmac
+    def get_hmac_key(self):
+        return self.hmac_key
+
+    @staticmethod
+    def send_hmac_key():
+        return SessionKey.get_hmac_key()
 
     # Retorna o salt.
     def get_salt(self):

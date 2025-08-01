@@ -5,6 +5,7 @@ from ..model import *
 from ..view import ClientView
 from ..service import*
 from .session_controller import SessionController
+from ..security import *
 
 class ClientController:
     def __init__(self):
@@ -46,7 +47,8 @@ class ClientController:
             if (message["to"] == self.model.username):
 
                 if (message["type"] == "message"):
-                    WriterService.save_message(message)
+                    message['body'] = Encrypt_DH.recebe_mensagem(message['body'])
+                    WriterService.save_message()
 
                 elif (message["type"] == "session_key"): 
                     '''Esse método é chamado para receber a chave pública do 

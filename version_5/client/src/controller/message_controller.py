@@ -4,6 +4,7 @@ import os
 from ..view import ChatView
 from ..service import *
 from ..model import *
+from ..security import Encrypt_DH
 
 class MessageController:
     def __init__(self, client_model, target, client_controller):
@@ -40,7 +41,7 @@ class MessageController:
             return
 
         # Aqui cabe criptografar a mensagem
-        criptografar = body # Esta variável vai chamar uma função que usa as chaves AES e HMAC para criptografar a mensagem.
+        criptografar = Encrypt_DH.prepare_send_message_dh(body) # Esta variável vai chamar uma função que usa as chaves AES e HMAC para criptografar a mensagem.
 
         # Monta a mensagem
         message = MessageModel("message", self.model.username, self.target, criptografar)
