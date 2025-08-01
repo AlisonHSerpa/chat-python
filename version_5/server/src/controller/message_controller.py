@@ -53,7 +53,7 @@ class MessageController:
 
     
     ''' handlers '''
-    def handle_message(self, origin, destiny, message, type = "message"):
+    def handle_message(self, origin, destiny, message, date, time, type = "message"):
         """Envia mensagem para o cliente"""
         print("chegou ate aqui")
         # verifica se os dois existem no banco de dados
@@ -62,7 +62,7 @@ class MessageController:
             return
 
         # Criar o objeto de mensagem
-        response = MessageModel(type, origin, destiny, message)
+        response = MessageModel(type, origin, destiny, message, date, time)
 
         # procura o destino
         destiny_client = None
@@ -144,11 +144,13 @@ class MessageController:
         origem = json_data.get("from")
         destino = json_data.get("to")
         corpo = json_data.get("body")
+        date = json_data.get("date")
+        time = json_data.get("time")
 
         handlers = {
             "changeusername": lambda: self.handle_username(origem, corpo) if destino == "server" else None,
-            "message": lambda: self.handle_message(origem, destino, corpo),
-            "session_key": lambda: self.handle_message(origem, destino, corpo, tipo),
+            "message": lambda: self.handle_message(origem, destino, corpo, date, time),
+            "session_key": lambda: self.handle_message(origem, destino, corpo, date, time, tipo),
             "request_key": lambda: self.handle_request(origem, destino)
         }
 
