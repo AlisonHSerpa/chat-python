@@ -68,58 +68,63 @@ class WriterService:
             except Exception as e:
                 raise RuntimeError(f"Erro ao ler arquivo JSON: {e}")
 
+    '''
+        "username": self.username,
+        "peer_username": self.peer_username,
+        "aes_key": self.aes_key.decode('utf-8'),  # Chave AES em formato string
+        "hmac_key": self.hmac_key.decode('utf-8'),  # Chave HMAC em formato string
+        "creation_time": self.creation_time,
+        "expiration_seconds": self.expiration_seconds,
+        "remaining_messages": self.remaining_messages,
+        "valid": self.valid
+    '''
     @staticmethod
-    def write_session(json_session_key, username, path_file=None, modo='w'):
-        ''' cria um arquivo para a session key ficar salva'''
+    def write_session_key(json_session_key: str, username: str, path_file=None, modo='w'):
+        '''Salva a session key em arquivo — aceita apenas JSON string'''
         if path_file is None:
             path_file = WriterService.get_session_file_path(username)
 
         file_lock = WriterService._get_file_lock(path_file)
+
         with file_lock:
             try:
+                # Valida se a string é um JSON válido antes de salvar
+                json.loads(json_session_key)
+
                 dir_path = os.path.dirname(path_file)
                 if dir_path and not os.path.exists(dir_path):
                     os.makedirs(dir_path)
 
                 with open(path_file, modo, encoding='utf-8') as arquivo:
                     arquivo.write(json_session_key)
-                return True
-            except Exception as e:
-                print(f"Erro ao escrever no arquivo: {e}")
-                return False
-            
-    @staticmethod
-    def get_session_key(username):
-        ''' pega o arquivo da session key, que eh nomeado pelo nome do cliente alvo'''
-        # procura o diretorio da session key
-        diretorio = WriterService.get_session_file_path(username)
 
-        #verifica se ele existe, se nao existir, retorna None
-        if not os.path.exists(diretorio):
-            return None 
-        
-        #se existir, ele pega e devolve dos dados
-        file_lock = WriterService._get_file_lock(diretorio)
+                return True
+            except json.JSONDecodeError:
+                print("[write_session_key] Erro: JSON inválido fornecido.")
+                return False
+            except Exception as e:
+                print(f"[write_session_key] Erro ao escrever no arquivo: {e}")
+                return False
+
+    @staticmethod
+    def get_session_key(username: str):
+        '''Lê a session key do disco e retorna como string JSON'''
+        path = WriterService.get_session_file_path(username)
+
+        if not os.path.exists(path):
+            return None
+
+        file_lock = WriterService._get_file_lock(path)
 
         with file_lock:
             try:
-                with open(diretorio, 'r', encoding='utf-8') as file:
-                    data = json.load(file)
-
-                return {
-                    "username": data["username"],
-                    "key": data["key"],
-                    "creation_time": data["creation_time"],
-                    "expiration_seconds": data["expiration_seconds"],
-                    "remaining_messages": data["remaining_messages"],
-                    "valid": data["valid"]
-                }
-            except FileNotFoundError:
-                raise FileNotFoundError(f"Arquivo '{diretorio}' não encontrado.")
-            except json.JSONDecodeError:
-                raise ValueError(f"O conteúdo do arquivo '{diretorio}' não é um JSON válido.")
+                with open(path, 'r', encoding='utf-8') as file:
+                    return file.read()  # retorna string JSON
             except Exception as e:
-                raise RuntimeError(f"Erro ao ler arquivo JSON: {e}")
+                print(f"[get_session_key] Erro: {e}")
+                return None
+
+
 
     @staticmethod
     def read_file(path_file, default_content=""):
@@ -234,3 +239,41 @@ class WriterService:
     @staticmethod
     def get_session_file_path(target):
         return os.path.join(WriterService.DATA_DIR, "temp", f"{target}.txt")
+    
+'''
+if __name__ == "__main__":
+    import json
+    from datetime import datetime
+
+    # Simula uma session key em formato JSON
+    session_data = {
+        "username": "alice",
+        "peer_username": "bob",
+        "aes_key": "YmFzZTY0LWFlcy1rZXk=",  # exemplo base64
+        "hmac_key": "aG1hYy1rZXk=",           # exemplo base64
+        "creation_time": datetime.now().strftime("%H:%M"),
+        "expiration_seconds": 3600,
+        "remaining_messages": 100,
+        "valid": True
+    }
+
+    json_str = json.dumps(session_data, indent=2)
+
+    print("===> Salvando session key...")
+    sucesso = WriterService.write_session_key(json_str, "bob")
+
+    if sucesso:
+        print("Session key salva com sucesso!\n")
+    else:
+        print("Falha ao salvar session key.\n")
+
+    print("===> Lendo session key...")
+    resultado = WriterService.get_session_key("bob")
+
+    if resultado:
+        print("Session key lida com sucesso:")
+        print(resultado)
+    else:
+        print("Session key não encontrada ou erro ao ler.")
+
+#'''

@@ -1,4 +1,4 @@
-import time
+from datetime import datetime
 import json
 from ..service import WriterService
 from ..security.diffie_helman import Diffie_Helman
@@ -15,7 +15,7 @@ class SessionKey:
         self.salt = None # 
         self.dh_private_key = None  # Chave privada temporária
 
-        self.creation_time = time.time()
+        self.creation_time = datetime.now().strftime("%H:%M")
         self.expiration_seconds = expiration_seconds
         self.remaining_messages = max_messages
         self.valid = valid
@@ -119,7 +119,7 @@ class SessionKey:
         }, indent=2)
 
     def is_expired(self):
-        return time.time() > self.creation_time + self.expiration_seconds
+        return datetime.now().strftime("%H:%M") > self.creation_time + self.expiration_seconds
 
     def check_session_key(self):
         if self.is_expired():
@@ -136,4 +136,4 @@ class SessionKey:
         return self.valid
 
     def save_session(self):
-        WriterService.write_session(self.to_json(), self.username)
+        WriterService.write_session_key(self.to_json(), self.username)
