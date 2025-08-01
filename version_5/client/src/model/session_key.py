@@ -85,6 +85,9 @@ class SessionKey:
     def set_dh_private_key(self, dh_private_key):
         self.dh_private_key = dh_private_key
 
+    @staticmethod 
+    def set_dh_private_key_static(dh_private_key):
+        SessionKey.set_dh_private_key(dh_private_key)
 
     # Retorna a chave AES 
     def get_aes_key(self):

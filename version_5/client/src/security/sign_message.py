@@ -19,7 +19,7 @@ class Assinatura:
             hashes.SHA256()
         )
         return signature
-    
+
     @staticmethod
     def decrypt_cesar (chave, cipherText):
         n = len(Assinatura.aphabet_cesar_cipher)
