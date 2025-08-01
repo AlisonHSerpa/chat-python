@@ -1,6 +1,7 @@
 from socket import socket, AF_INET, SOCK_STREAM
 from queue import Queue
 import json
+import time
 
 class MailService:
 
@@ -17,6 +18,9 @@ class MailService:
     # feito para ENVIAR mensagens a serem enviadas [JSON]
     mailman = Queue()
 
+    # para fechar o programa direito
+    running = True
+
     @staticmethod
     def connect_to_server():
         '''Conecta ao servidor'''
@@ -31,7 +35,7 @@ class MailService:
     @staticmethod
     def listen():
         '''Recebe todas as mensagens e coloca na mailbox'''
-        while True:
+        while MailService.running:
             try:
                 response = MailService.socket.recv(1500).decode()
                 if not response:
@@ -49,7 +53,7 @@ class MailService:
     @staticmethod
     def deliver():
         '''Pega mensagens da fila mailman e envia pelo socket'''
-        while True:
+        while MailService.running:
             try:
                 mensagem = MailService.mailman.get(block=True)
                 MailService.socket.send(mensagem.encode())
@@ -71,3 +75,8 @@ class MailService:
     @staticmethod
     def disconnect():
         MailService.socket.close()
+
+    @staticmethod
+    def stop():
+        MailService.running = False
+        time.sleep(0.5)

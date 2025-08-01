@@ -17,4 +17,3 @@ class Assinatura:
             hashes.SHA256()
         )
         return signature
-    
