@@ -17,7 +17,7 @@ class MessageController:
         self._chat_lock = threading.Lock()
 
         # chave de sessao vai estar com o messagecontroller
-        #self.session_key = self.load_session_key()
+        self.session_key = self.load_session_key()
         
         # Garante que o arquivo existe de forma thread-safe
         WriterService.read_file(self.diretorio)
