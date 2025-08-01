@@ -2,6 +2,7 @@
 from ..service import WriterService
 from ..model import SessionKey
 from ..model import MessageModel
+from ..security import *
 import base64
 
 class SessionController:
