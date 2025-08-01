@@ -26,7 +26,8 @@ class ClientController:
         
         self.chats = {}
         self.online_users = []
-        self.public_keys = {}
+       # nao deve salvar as chaves
+       # self.public_keys = {}
         self.view = ClientView(self)
 
         # threads de envio e recepção
@@ -66,7 +67,9 @@ class ClientController:
                     self.set_online_users(message["body"])
 
                 elif (message["type"] == "request_key"):
-                    self.public_keys[message["from"]] = message["body"]
+                    print()
+                    # chama o sessionservice para guardar
+                    # self.public_keys[message["from"]] = message["body"]
 
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)

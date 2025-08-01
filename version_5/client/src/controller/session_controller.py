@@ -127,3 +127,8 @@ class SessionController:
             
             # Envia os dados para o destinatário via socket
             mensagem_encriptada = EncryptionRSA.encrypt_with_public_key(mensagem, peer_public_key)
+
+        '''
+            recebe uma rsa_pub_key e começa o DH (gera parametros, salt e as 2 chaves DH)
+            retorna uma mensagem do tipo session key (salt, pub_key_DH, parametros) para o mailman
+        '''

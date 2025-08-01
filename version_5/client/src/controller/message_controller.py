@@ -16,11 +16,12 @@ class MessageController:
         self.update_thread = None
         self._chat_lock = threading.Lock()
         
+        # chaves para encriptar
+        self.peer_pub_key = None
+        self.session_key = None
+
         # Garante que o arquivo existe de forma thread-safe
         WriterService.read_file(self.diretorio)
-
-        # chave de sessao vai estar com o messagecontroller
-        self.session_key = self.load_session_key()
 
     def create_view(self):
         ''' Must be called from the main thread (Tkinter-safe) '''
@@ -70,6 +71,12 @@ class MessageController:
         ''' Thread que verifica atualizações no arquivo de chat '''
         last_modified = 0
         while self.running:
+
+            ''' 1 -
+                    Pede a sessionKey para o SessionService
+                    se não tiver pede a public key para o SessionService
+            
+            '''            
             try:
                 current_modified = os.path.getmtime(self.diretorio) if os.path.exists(self.diretorio) else 0
                 if current_modified > last_modified:
@@ -84,26 +91,29 @@ class MessageController:
         ''' vai verificar se tem uma session key e carregar, se nao tiver/for valida, cria uma nova'''
         data = WriterService.get_session_key(self.target)
         
+        
         # se a chave nao existe
         if not data:
             # pede a chave publica do target para o servidor
-            SessionKeyService.request_public_key(self.model.username , self.target)
+            SessionKeyService.request_public_key(self.model.username, self.target)
             self.public_key = None
 
             # espera a public key
-            self.wait_pub_key()
+            rsa_peer_public_key = self.wait_pub_key()
 
             # chegou
             print("chegou a public key")
-            print(self.public_key)
+            print(rsa_peer_public_key)
 
-            # processa mais dps
-            return None
+            # TODO: Aqui se envia a primeira mensagem session key
+            SessionKey(self.model.username, rsa_peer_public_key, self.target, 3600, 100, True)
+
+            # TODO: PRIMEIRO DIFFIE HELMAN COMEÇA AQUI
+
+            
         else:
-            # se nao, carrega a chave de sessao que ele tem
-            session_key = SessionKey(data["key"], data["username"], data["expiration_seconds"], data["remaining_messages"], data["valid"])
-        
-        return session_key
+            # se existir, carrega a chave de sessao que ele tem
+            SessionKey(data["key"], data["username"], data["expiration_seconds"], data["remaining_messages"], data["valid"])
     
     def set_public_key(self, pub_key):
         self.public_key = pub_key
@@ -114,8 +124,7 @@ class MessageController:
 
             # Verifica se a chave já está presente
             if self.target in self.client_controller.public_keys:
-                self.public_key = self.client_controller.public_keys[self.target]
-                break
+                return self.client_controller.public_keys[self.target]
             
             time.sleep(1.5)
             

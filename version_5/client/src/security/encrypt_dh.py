@@ -30,3 +30,4 @@ class Encrypt_DH:
         h = hmac.HMAC(hmac_key, hashes.SHA256())
         h.update(data)
         return h.finalize()
+ 
