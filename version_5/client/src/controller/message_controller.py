@@ -74,19 +74,10 @@ class MessageController:
 
             ''' 1 -
                     Pede a sessionKey para o SessionService
-                    se não tiver pede a public key para o SessionService
-            
-            '''            
-
-            # Primeiro, pede-se a SessionKey para a classe SessionService.
-            self.session_key = SessionKeyService.request_session_key()
-
-            if self.session_key is None:
-                # A linha abaixo vai pedir a chave rsa pública do peer para o SessionService para usar temporariamente enquanto não poder estabelecer a sessão
-                # self.peer_pub_key = 
-                print()
-
-
+            '''
+            if not self.peer_pub_key:
+                self.peer_pub_key = self.wait_pub_key()
+                print(self.peer_pub_key)
 
             try:
                 current_modified = os.path.getmtime(self.diretorio) if os.path.exists(self.diretorio) else 0
@@ -96,20 +87,15 @@ class MessageController:
                     last_modified = current_modified
             except Exception as e:
                 print(f"Erro ao verificar atualizações do chat: {e}")
-            time.sleep(1.5)
-    
-    def set_public_key(self, pub_key):
-        self.public_key = pub_key
+            time.sleep(0.8)
 
     def wait_pub_key(self):
-        while not self.public_key:
+        while True:
             print("esperando public key...")
-
-            # Verifica se a chave já está presente
-            if self.target in self.client_controller.public_keys:
-                return self.client_controller.public_keys[self.target]
-            
-            time.sleep(1.5)
+            rsa_pub_key = SessionKeyService.verificar_rsa_pub_key(self.model.username, self.target)
+            if rsa_pub_key:
+                return rsa_pub_key
+            time.sleep(0.5)
             
 
     def stop(self):
