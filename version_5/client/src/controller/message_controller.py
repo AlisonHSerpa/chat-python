@@ -39,7 +39,7 @@ class MessageController:
             return
 
         # Aqui cabe criptografar a mensagem
-        criptografar = body
+        criptografar = body # Esta variável vai chamar uma função que usa as chaves AES e HMAC para criptografar a mensagem.
 
         # Monta a mensagem
         message = MessageModel("message", self.model.username, self.target, criptografar)

@@ -8,7 +8,7 @@ from ..security.translate_pem import Translate_Pem
 class SessionKey:
     def __init__(self, username, expiration_seconds=3600, max_messages=100, valid=True):
         self.username = username
-        
+
         self.peer_username = None  # Nome do destinatário, para indicar o usuário com quem a sessão é estabelecida
         self.peer_public_rsa_key = None # Vai receber a chave pública assíncrona do servidor no início da sessão
         self.aes_key, self.hmac_key = None  # Chaves para criptografia e verificação de integridade
@@ -92,6 +92,14 @@ class SessionKey:
     def set_peer(self, peer):
         self.peer_username = peer
 
+    # Retorna a chave AES 
+    def get_aes_key(self):
+        return self.aes_key
+
+    # Envia para a função de encriptação
+    @staticmethod
+    def send_aes_key():
+        return SessionKey.get_aes_key()
 
     # Retorna o salt.
     def get_salt(self):
