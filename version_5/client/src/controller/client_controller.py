@@ -61,11 +61,13 @@ class ClientController:
 
                     SessionController.separar_dados_dh(message["body"], message["nome"])
 
-                    
-
                 
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
+
+                elif (message["type"] == "request_key"):
+                    print(f"request_key deu certo {message["from"]} {message["body"]}")
+
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)
 

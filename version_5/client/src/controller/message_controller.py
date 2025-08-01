@@ -37,7 +37,7 @@ class MessageController:
         body = self.view.get_message_input()
         if not body:
             return
-        
+
         # Aqui cabe criptografar a mensagem
         criptografar = body
 

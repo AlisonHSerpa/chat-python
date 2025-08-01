@@ -29,8 +29,10 @@ class MessageController:
                     # faz o tratamento adequado para cada tipo de mensagem
                     if json_data.get("type") == "changeusername" and json_data.get("to") == "server":
                         self.handle_username(json_data["from"], json_data["body"])
-                    if json_data.get("type") == "message" and json_data.get("to") != None:
+                    elif json_data.get("type") == "message" and json_data.get("to") != None:
                         self.handle_message(json_data["from"], json_data["to"], json_data["body"])
+                    elif json_data.get("type") == "request_key":
+                        self.handle_request(json_data["from"],json_data["to"])
 
                 except json.JSONDecodeError:
                     # Se não for um JSON válido
@@ -57,28 +59,19 @@ class MessageController:
 
     def handle_message(self, origin, destiny, message):
         """Envia mensagem para o cliente"""
-        try:
-            # procura o objeto cliente de origem
-            origin_client = self.repository.get_client_by_username(origin)
-            if origin_client is None:
-                print(f"Usuário de origem '{origin}' não encontrado.")
-                return
-
-            target_client = self.repository.get_client_by_username(destiny)
-            if target_client is None:
-                print(f"Usuário de destino '{destiny}' não encontrado.")
-                return
-        except Exception as e:
-            print(f"Erro ao acessar o banco de dados: {e}")
+        print("chegou ate aqui")
+        # verifica se os dois existem no banco de dados
+        if not self.find_both_clients:
+            print("verificaçao falhou")
             return
 
         # Criar o objeto de mensagem
         response = MessageModel("message", origin, destiny, message)
 
-        # Verifica se o cliente está online
+        # procura o destino
         destiny_client = None
         for client in self.model.clients:
-            if client.username == target_client["username"]:
+            if client.username == destiny:
                 destiny_client = client
                 break
 
@@ -94,12 +87,32 @@ class MessageController:
             except Exception as e:
                 print(f"Erro ao enviar mensagem para {destiny}: {e}")
 
-
     def handle_username(self, address, username):
         for client in self.model.clients:
             if client.address == address:
                 client.setusername(username)
-                break
+                return
+
+    def handle_request(self, origin, target):
+        # verifica se os dois existem no banco de dados
+        if not self.find_both_clients:
+            return
+
+        # pega a key do target
+        target_client = self.repository.get_client_by_username(target)
+        target_key = target_client["key"]
+
+        # monta a mensagem
+        response = MessageModel("request_key", target, origin, target_key)
+
+        # envia se a origem estiver onlinde
+        for client in self.model.clients:
+            if client.username == origin:
+                client.socket.sendall(response.get_message().encode())
+                return
+
+        # se nao estiver online, armazena
+        response.hold_message(self.repository)
 
     # metodo para reenviar mensagens pendentes
     def retreive_old_messages(self, cliente):
@@ -108,3 +121,21 @@ class MessageController:
         while not mensagens_pendentes.empty():
             mensagem = mensagens_pendentes.get()
             cliente.socket.sendall(json.dumps(mensagem).encode())
+
+    def find_both_clients(self, origin, destiny):
+        try:
+            # procura o objeto cliente de origem
+            origin_client = self.repository.get_client_by_username(origin)
+            if origin_client is None:
+                print(f"Usuário de origem '{origin}' não encontrado.")
+                return False
+
+            target_client = self.repository.get_client_by_username(destiny)
+            if target_client is None:
+                print(f"Usuário de destino '{destiny}' não encontrado.")
+                return False
+            
+            return True
+        except Exception as e:
+            print(f"Erro ao acessar o banco de dados: {e}")
+            return False
