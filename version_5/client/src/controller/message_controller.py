@@ -2,9 +2,8 @@ import time
 import threading
 import os
 from ..view import ChatView
-from ..service import WriterService
+from ..service import *
 from ..model import *
-from .mail_controller import MailController
 
 class MessageController:
     def __init__(self, client_model, target, client_controller):
@@ -46,7 +45,7 @@ class MessageController:
         message = MessageModel("message", self.model.username, self.target, criptografar)
 
         # Envia a mensagem
-        MailController.send_to_mailman(message)
+        MailService.send_to_mailman(message.get_message())
 
         # Mostra no chat e salva
         self.post_message(message.message)

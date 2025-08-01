@@ -1,15 +1,15 @@
 from threading import Thread
 from .message_controller import MessageController
-import json
 from ..model import *
 from ..view import ClientView
-from ..service import WriterService
-from ..controller import SessionController
-from .mail_controller import MailController
+from ..service import*
+from .session_controller import SessionController
 
 class ClientController:
     def __init__(self):
         ''' inicia toda a aplicacao criando cliente, interface e conexoes'''
+        # conecta
+        MailService.connect_to_server()
         self.chats = {}
         self.online_users = []
         self.model = ClientModel()
@@ -21,21 +21,18 @@ class ClientController:
         
         self.view = ClientView(self)
 
-        # conecta
-        MailController.connect_to_server()
-
         # threads de envio e recepção
-        Thread(target=MailController.listen, daemon=True).start()
-        Thread(target=MailController.deliver, daemon=True).start()
+        Thread(target=MailService.listen, daemon=True).start()
+        Thread(target=MailService.deliver, daemon=True).start()
 
         # Loop para processar mensagens recebidas
         self.view.after(100, self.process_messages)
 
     def process_messages(self):
         ''' encaminha as mensagens do Mailbox para seus devidos tratamentos'''
-        while not MailController.mailbox.empty():
+        while not MailService.mailbox.empty():
             # pega uma mensagem que chegou no mailbox
-            message = MailController.take_from_mailbox()
+            message = MailService.take_from_mailbox()
 
             # confere se a mensagem eh para voce
             if (message["to"] == self.model.username):
@@ -50,7 +47,7 @@ class ClientController:
                     return_message = SessionController.separar_dados_dh(message["body"], message["nome"]) 
                     
                     # Enfim, é enviada a chave pública para o destinatário.
-                    self.model.socket.sendall(return_message.get_message().encode())
+                    MailService.socket.sendall(return_message.get_message().encode())
 
                 elif (message["type"] == "session_key_response"):
                     '''Esse método é chamado para receber APENAS a chave pública do remetente.'''
@@ -97,6 +94,7 @@ class ClientController:
     def disconnect(self):
         """Desconecta do servidor"""
         self.model.disconnect()
+        MailService.disconnect()
 
     def run(self):
         """Inicia a aplicação"""
