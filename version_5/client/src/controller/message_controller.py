@@ -77,6 +77,17 @@ class MessageController:
                     se não tiver pede a public key para o SessionService
             
             '''            
+
+            # Primeiro, pede-se a SessionKey para a classe SessionService.
+            self.session_key = SessionKeyService.request_session_key()
+
+            if self.session_key is None:
+                # A linha abaixo vai pedir a chave rsa pública do peer para o SessionService para usar temporariamente enquanto não poder estabelecer a sessão
+                # self.peer_pub_key = 
+                print()
+
+
+
             try:
                 current_modified = os.path.getmtime(self.diretorio) if os.path.exists(self.diretorio) else 0
                 if current_modified > last_modified:
@@ -86,34 +97,6 @@ class MessageController:
             except Exception as e:
                 print(f"Erro ao verificar atualizações do chat: {e}")
             time.sleep(1.5)
-
-    def load_session_key(self):
-        ''' vai verificar se tem uma session key e carregar, se nao tiver/for valida, cria uma nova'''
-        data = WriterService.get_session_key(self.target)
-        
-        
-        # se a chave nao existe
-        if not data:
-            # pede a chave publica do target para o servidor
-            SessionKeyService.request_public_key(self.model.username, self.target)
-            self.public_key = None
-
-            # espera a public key
-            rsa_peer_public_key = self.wait_pub_key()
-
-            # chegou
-            print("chegou a public key")
-            print(rsa_peer_public_key)
-
-            # TODO: Aqui se envia a primeira mensagem session key
-            SessionKey(self.model.username, rsa_peer_public_key, self.target, 3600, 100, True)
-
-            # TODO: PRIMEIRO DIFFIE HELMAN COMEÇA AQUI
-
-            
-        else:
-            # se existir, carrega a chave de sessao que ele tem
-            SessionKey(data["key"], data["username"], data["expiration_seconds"], data["remaining_messages"], data["valid"])
     
     def set_public_key(self, pub_key):
         self.public_key = pub_key
