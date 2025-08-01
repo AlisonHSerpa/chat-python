@@ -91,9 +91,16 @@ class WriterService:
     @staticmethod
     def get_session_key(username):
         ''' pega o arquivo da session key, que eh nomeado pelo nome do cliente alvo'''
+        # procura o diretorio da session key
         diretorio = WriterService.get_session_file_path(username)
 
+        #verifica se ele existe, se nao existir, retorna None
+        if not os.path.exists(diretorio):
+            return None 
+        
+        #se existir, ele pega e devolve dos dados
         file_lock = WriterService._get_file_lock(diretorio)
+
         with file_lock:
             try:
                 with open(diretorio, 'r', encoding='utf-8') as file:

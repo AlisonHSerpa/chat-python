@@ -26,6 +26,7 @@ class ClientController:
         
         self.chats = {}
         self.online_users = []
+        self.public_keys = {}
         self.view = ClientView(self)
 
         # threads de envio e recepção
@@ -65,7 +66,7 @@ class ClientController:
                     self.set_online_users(message["body"])
 
                 elif (message["type"] == "request_key"):
-                    print(f"request_key deu certo {message["from"]} {message["body"]}")
+                    self.public_keys[message["from"]] = message["body"]
 
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)

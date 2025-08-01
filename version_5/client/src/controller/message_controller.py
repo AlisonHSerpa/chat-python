@@ -15,12 +15,12 @@ class MessageController:
         self.running = True
         self.update_thread = None
         self._chat_lock = threading.Lock()
-
-        # chave de sessao vai estar com o messagecontroller
-        self.session_key = self.load_session_key()
         
         # Garante que o arquivo existe de forma thread-safe
         WriterService.read_file(self.diretorio)
+
+        # chave de sessao vai estar com o messagecontroller
+        self.session_key = self.load_session_key()
 
     def create_view(self):
         ''' Must be called from the main thread (Tkinter-safe) '''
@@ -83,11 +83,42 @@ class MessageController:
     def load_session_key(self):
         ''' vai verificar se tem uma session key e carregar, se nao tiver/for valida, cria uma nova'''
         data = WriterService.get_session_key(self.target)
-        session_key = SessionKey(data["key"], data["username"], data["expiration_seconds"], data["remaining_messages"], data["valid"])
         
-        # falta o processo de criar a chave de sessao caso ela nao existir
+        # se a chave nao existe
+        if not data:
+            # pede a chave publica do target para o servidor
+            SessionKeyService.request_public_key(self.model.username , self.target)
+            self.public_key = None
+
+            # espera a public key
+            self.wait_pub_key()
+
+            # chegou
+            print("chegou a public key")
+            print(self.public_key)
+
+            # processa mais dps
+            return None
+        else:
+            # se nao, carrega a chave de sessao que ele tem
+            session_key = SessionKey(data["key"], data["username"], data["expiration_seconds"], data["remaining_messages"], data["valid"])
         
         return session_key
+    
+    def set_public_key(self, pub_key):
+        self.public_key = pub_key
+
+    def wait_pub_key(self):
+        while not self.public_key:
+            print("esperando public key...")
+
+            # Verifica se a chave já está presente
+            if self.target in self.client_controller.public_keys:
+                self.public_key = self.client_controller.public_keys[self.target]
+                break
+            
+            time.sleep(1.5)
+            
 
     def stop(self):
         ''' Para a thread de atualização '''
