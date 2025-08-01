@@ -8,10 +8,13 @@ from ..security.translate_pem import Translate_Pem
 class SessionKey:
     def __init__(self, username, expiration_seconds=3600, max_messages=100, valid=True):
         self.username = username
+        
         self.peer_username = None  # Nome do destinatário, para indicar o usuário com quem a sessão é estabelecida
+        self.peer_public_rsa_key = None # Vai receber a chave pública assíncrona do servidor no início da sessão
         self.aes_key, self.hmac_key = None  # Chaves para criptografia e verificação de integridade
         self.salt = None
         self.dh_private_key = None  # Chave privada temporária
+
         self.creation_time = time.time()
         self.expiration_seconds = expiration_seconds
         self.remaining_messages = max_messages
@@ -20,6 +23,8 @@ class SessionKey:
 
     @staticmethod
     def set_session_key(salt, parameters: bytes, peer_public_key: bytes, nome: str):
+        SessionKey.set_peer(nome)
+
         if parameters is None and salt is None:
             print("Parâmetros e salt não fornecidos, " \
             "então a chave privada já foi gerada e o salt já está presente nas variáveis locais.")
@@ -41,7 +46,6 @@ class SessionKey:
             save_session()  # Salva a sessão com as novas chaves.
             
             print("Chave de sessão gerada com sucesso.")
-            return None  # Retorna None, pois não há chave pública a ser retornada nesse caso.
 
 
 
@@ -60,24 +64,34 @@ class SessionKey:
             SessionKey.set_dh_private_key(None)  # Define a chave privada como None após ser usada.
             SessionKey.save_session()  # Salva a sessão com as novas chaves.
             print("Chave de sessão gerada com sucesso.")
-            return pem_public_key
 
         else:
             print("Informações incompletas, não é possível gerar a chave de sessão.")
             return None  # Retorna None se não for possível gerar a chave de sessão.
 
 
+    # Retorna a chave pública rsa do peer
+    def get_public_rsa_key(self):
+        return self.get_public_rsa_key
+    
     # Define as chaves AES e HMAC após o Diffie Helman ser usado.
     def set_keys(self, aes_key: bytes, hmac_key: bytes):
         self.aes_key = aes_key
         self.hmac_key = hmac_key
         self.save_session()
 
+    # Define e retorna a chave privada diffie_helman momentânea
     def get_dh_private_key(self):
         return self.dh_private_key
     
     def set_dh_private_key(self, dh_private_key):
         self.dh_private_key = dh_private_key
+
+
+    # Define o nome do peer que faz parte desta sessão 
+    def set_peer(self, peer):
+        self.peer_username = peer
+
 
     # Retorna o salt.
     def get_salt(self):
@@ -90,6 +104,7 @@ class SessionKey:
     def to_json(self):
         return json.dumps({
             "username": self.username,
+            "peer_username": self.peer_username,
             "aes_key": self.aes_key.decode('utf-8'),  # Chave AES em formato string
             "hmac_key": self.hmac_key.decode('utf-8'),  # Chave HMAC em formato string
             "creation_time": self.creation_time,

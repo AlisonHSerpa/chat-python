@@ -60,7 +60,6 @@ class ClientController:
                     '''Esse método é chamado para receber APENAS a chave pública do remetente.'''
 
                     SessionController.separar_dados_dh(message["body"], message["nome"])
-
                 
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
