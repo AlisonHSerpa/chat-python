@@ -10,12 +10,12 @@ from ..security.sign_message import Assinatura
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from base64 import b64encode, b64decode
+from ..controller import MailController
 
 class ClientModel:
     def __init__(self):
-        self.message_queue = Queue()
         self.connected = False
-        self.connect_to_server()        # server ip pode ser uma env.example
+        self.start_client()
 
     def start_client(self):
         ''' pergunta o nome do usuario caso nao exista um arquivo usuario'''
@@ -48,26 +48,6 @@ class ClientModel:
             # cadastra no servidor
             self.sign_up()
 
-
-    def connect_to_server(self, host='127.0.0.1', port=8000):
-        ''' faz a conexao com o servidor '''
-        try:
-            self.server_host = host
-            self.server_port = port
-            self.socket = socket(AF_INET, SOCK_STREAM)
-            self.socket.connect((host, port))
-            
-            # Primeira ação ao conectar: dizer quem eh para o servidor
-            self.start_client()
-            
-            if not self.socket:
-                return
-                
-            self.connected = True
-        except Exception as e:
-            print(e)
-            return str(e)
-
     ''' Método para login no servidor
     O login é feito através de uma assinatura digital do desafio enviado pelo servidor.
     O desafio é assinado com a chave privada do usuário e a assinatura é enviada de volta ao servidor.
@@ -81,14 +61,13 @@ class ClientModel:
             # 1. Envia solicitação de login com MessageModel
             hello = MessageModel("login", self.username, "server", "Hello server!")
             print(hello.get_message())
-            self.socket.sendall(hello.get_message().encode())
+            MailController.socket.sendall(hello.get_message().encode())
 
             # 2. Recebe o desafio do servidor    
-            challenge_b64 = self.socket.recv(1500).decode()
+            challenge_b64 = MailController.socket.recv(1500).decode()
             challenge = b64decode(challenge_b64)  # 3. Decodifica o desafio
 
             # 4. Carrega chave privada
-            
             private_key = Translate_Pem.receive_key(self.private_key)
             print(private_key)
 
@@ -98,11 +77,11 @@ class ClientModel:
             # 6. Codifica e envia a assinatura de volta ao servidor
             print("Enviando assinatura ao servidor...")
             signature_b64 = b64encode(signature).decode()  # Transforma em string base64
-            self.socket.sendall(signature_b64.encode())  # Envia como string
+            MailController.socket.sendall(signature_b64.encode())  # Envia como string
 
             # 7. Recebe a resposta do servidor
             print("Aguardando resposta do servidor...")
-            result = self.socket.recv(1500).decode()
+            result = MailController.socket.recv(1500).decode()
             if result == "OK":
                 print("Login aceito!")
             else:
@@ -126,9 +105,9 @@ class ClientModel:
             pubkey_str = self.public_key
             
             message = MessageModel("sign up", self.username, "server", pubkey_str)
-            self.socket.sendall(message.get_message().encode())
+            MailController.socket.sendall(message.get_message().encode())
 
-            response = self.socket.recv(1024).decode()
+            response = MailController.socket.recv(1024).decode()
             message = MessageModel.receive_data(response)
 
             if message["type"] == "erro":
@@ -150,16 +129,6 @@ class ClientModel:
                 print("disconect pass")
             self.socket = None
         self.connected = False
-
-    def send_message(self, message):
-        ''' envia uma mensagem para o servidor '''
-        if self.connected:
-            try:
-                self.socket.sendall(message.get_message().encode())
-                return True
-            except Exception as e:
-                return str(e)
-        return "Not connected"
     
     def jsonify(self):
         data = {

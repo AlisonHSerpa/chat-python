@@ -19,3 +19,4 @@ class MessageModel:
     @staticmethod
     def receive_data(response):
         return json.loads(response)
+    

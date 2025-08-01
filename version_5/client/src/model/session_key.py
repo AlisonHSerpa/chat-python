@@ -3,7 +3,6 @@ import json
 from ..service import WriterService
 from ..security.diffie_helman import Diffie_Helman
 from ..security.translate_pem import Translate_Pem
-from ..controller.session_controller import SessionController
 
 # session key usa writerService para fazer autosave
 class SessionKey:

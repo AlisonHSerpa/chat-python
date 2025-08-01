@@ -4,10 +4,11 @@ import os
 from ..view import ChatView
 from ..service import WriterService
 from ..model import *
+from .mail_controller import MailController
 
 class MessageController:
-    def __init__(self, model, target, client_controller):
-        self.model = model
+    def __init__(self, client_model, target, client_controller):
+        self.model = client_model
         self.target = target
         self.view = None
         self.client_controller = client_controller
@@ -45,7 +46,7 @@ class MessageController:
         message = MessageModel("message", self.model.username, self.target, criptografar)
 
         # Envia a mensagem
-        self.model.send_message(message)
+        MailController.send_to_mailman(message)
 
         # Mostra no chat e salva
         self.post_message(message.message)

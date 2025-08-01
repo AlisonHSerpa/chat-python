@@ -5,6 +5,7 @@ from ..model import *
 from ..view import ClientView
 from ..service import WriterService
 from ..controller import SessionController
+from .mail_controller import MailController
 
 class ClientController:
     def __init__(self):
@@ -13,63 +14,32 @@ class ClientController:
         self.online_users = []
         self.model = ClientModel()
         
+        # confere se o cliente foi bem iniciado, se n foi, fecha o programa
         if not self.model.connected:
             print("cliente não iniciado")
             raise ConnectionError("Não foi possível conectar ao servidor.")
-
+        
         self.view = ClientView(self)
-        
-        # Configura o listener para mensagens do servidor
-        self.start_listening()
-        
-        # Inicia o processamento de mensagens
+
+        # conecta
+        MailController.connect_to_server()
+
+        # threads de envio e recepção
+        Thread(target=MailController.listen, daemon=True).start()
+        Thread(target=MailController.deliver, daemon=True).start()
+
+        # Loop para processar mensagens recebidas
         self.view.after(100, self.process_messages)
-
-    def setup_mvc(self):
-        
-        
-        self.model = ClientModel()
-        
-        if not self.model.connected:
-            print("cliente não iniciado")
-            return 
-
-        self.view = ClientView(self)
-        
-        # Configura o listener para mensagens do servidor
-        self.start_listening()
-        
-        # Inicia o processamento de mensagens
-        self.view.after(100, self.process_messages)
-
-    def start_listening(self):
-        ''' escuta as mensagens e coloca elas na queue do model'''
-        def listen():
-            while self.model.connected:
-                try:
-                    response = self.model.socket.recv(1500).decode()
-                    if not response:
-                        break
-
-                    try:
-                        mensagem = MessageModel.receive_data(response)
-                        self.model.message_queue.put(mensagem)
-                    except json.JSONDecodeError:
-                        print("Erro ao decodificar mensagem")
-                        break
-                except Exception as e:
-                    self.view.show_error(f'erro: {e}')
-                    break
-            self.model.connected = False
-            self.view.show_error("desconectado do servidor")
-
-        Thread(target=listen, daemon=True).start()
 
     def process_messages(self):
-        """Processa mensagens na queue que o model RECEBE"""
-        while not self.model.message_queue.empty():
-            message = self.model.message_queue.get()
+        ''' encaminha as mensagens do Mailbox para seus devidos tratamentos'''
+        while not MailController.mailbox.empty():
+            # pega uma mensagem que chegou no mailbox
+            message = MailController.take_from_mailbox()
+
+            # confere se a mensagem eh para voce
             if (message["to"] == self.model.username):
+
                 if (message["type"] == "message"):
                     WriterService.save_message(message)
 
