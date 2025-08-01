@@ -31,12 +31,13 @@ class SessionKeyService:
 
 
     @staticmethod
-    def verificar_rsa_pub_key(target):
+    def verificar_rsa_pub_key(username, target):
         ''' verifica se tem rsa_pub_key, se não tiver, pede e retorna falso'''
         # procura do dicionario o target para devolver sua rsa_pub_key
         if target in SessionKeyService.rsa_public_keys:
             return SessionKeyService.rsa_public_keys[target]
         else:
+            SessionKeyService.request_public_key(username , target)
             return False
 
    

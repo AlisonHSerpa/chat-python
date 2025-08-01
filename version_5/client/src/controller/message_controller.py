@@ -74,9 +74,11 @@ class MessageController:
 
             ''' 1 -
                     Pede a sessionKey para o SessionService
-                    se não tiver pede a public key para o SessionService
-            
-            '''            
+            '''
+            if not self.peer_pub_key:
+                self.peer_pub_key = self.wait_pub_key()
+                print(self.peer_pub_key)
+
             try:
                 current_modified = os.path.getmtime(self.diretorio) if os.path.exists(self.diretorio) else 0
                 if current_modified > last_modified:
@@ -85,48 +87,15 @@ class MessageController:
                     last_modified = current_modified
             except Exception as e:
                 print(f"Erro ao verificar atualizações do chat: {e}")
-            time.sleep(1.5)
-
-    def load_session_key(self):
-        ''' vai verificar se tem uma session key e carregar, se nao tiver/for valida, cria uma nova'''
-        data = WriterService.get_session_key(self.target)
-        
-        
-        # se a chave nao existe
-        if not data:
-            # pede a chave publica do target para o servidor
-            SessionKeyService.request_public_key(self.model.username, self.target)
-            self.public_key = None
-
-            # espera a public key
-            rsa_peer_public_key = self.wait_pub_key()
-
-            # chegou
-            print("chegou a public key")
-            print(rsa_peer_public_key)
-
-            # TODO: Aqui se envia a primeira mensagem session key
-            SessionKey(self.model.username, rsa_peer_public_key, self.target, 3600, 100, True)
-
-            # TODO: PRIMEIRO DIFFIE HELMAN COMEÇA AQUI
-
-            
-        else:
-            # se existir, carrega a chave de sessao que ele tem
-            SessionKey(data["key"], data["username"], data["expiration_seconds"], data["remaining_messages"], data["valid"])
-    
-    def set_public_key(self, pub_key):
-        self.public_key = pub_key
+            time.sleep(0.8)
 
     def wait_pub_key(self):
-        while not self.public_key:
+        while True:
             print("esperando public key...")
-
-            # Verifica se a chave já está presente
-            if self.target in self.client_controller.public_keys:
-                return self.client_controller.public_keys[self.target]
-            
-            time.sleep(1.5)
+            rsa_pub_key = SessionKeyService.verificar_rsa_pub_key(self.model.username, self.target)
+            if rsa_pub_key:
+                return rsa_pub_key
+            time.sleep(0.5)
             
 
     def stop(self):

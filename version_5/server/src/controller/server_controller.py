@@ -133,7 +133,7 @@ class ServerController:
                     client.socket.sendall(message.get_message().encode())
                 except Exception:
                     self.model.clients.remove(client)
-            time.sleep(5)
+            time.sleep(1.5)
 
     def recv_until_newline(sock):
         buffer = b''

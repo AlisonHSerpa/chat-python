@@ -66,9 +66,9 @@ class ClientController:
                     self.set_online_users(message["body"])
 
                 elif (message["type"] == "request_key"):
-                    print()
+                    print(message)
                     # chama o sessionkeyservice para guardar
-                    SessionKeyService.insert_rsa_public_key(message["target"], message["body"])
+                    SessionKeyService.insert_rsa_public_key(message["from"], message["body"])
 
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)
