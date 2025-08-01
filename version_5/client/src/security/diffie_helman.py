@@ -8,14 +8,15 @@ class Diffie_Helman:
     segura de chaves criptográficas entre duas partes, para a obtenção de uma chave compartilhada.
     Também é responsável por gerar o salt, que é usado para derivar a chave compartilhada.''' 
     
-    '''O código abaixo lê o arquivo de parâmetros para a geração de chaves.
+    '''O código abaixo gera parâmetros para a geração de chaves.
     Os parãmetros são usados para o Diffie-Hellman, que é um protocolo de troca de chaves.
-    O arquivo de parâmetros deve ser gerado previamente e armazenado no diretório especificado.
+    Os parâmetros devem ser gerados previamente e enviados após o uso para a criação de chaves dh.
     Os parâmetros são sempre 2 e 2048, mas eles sempre serão gerados por quem iniciou a sessão.'''
     @staticmethod
-    def get_parameters():
-        with open("version_5/client/src/security/dh_params.pem", "rb") as f:
-            parameters = load_pem_parameters(f.read())
+    def generate_parameters():
+        parameters = dh.generate_parameters(
+            generator=2, key_size=2048
+        )
         return parameters
     
     '''O código abaixo gera uma chave privada e pública temporária para o Diffie-Hellman.

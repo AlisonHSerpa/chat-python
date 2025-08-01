@@ -5,8 +5,7 @@ from .translate_pem import Translate_Pem
 
 class Keygen:
 
-    '''# Esta classe é responsável por gerar e manipular chaves criptográficas,
-    # incluindo chaves RSA e Diffie-Hellman.'''
+    '''# Esta classe é responsável por gerar chaves criptográficas RSA.'''
    
    
     # O código abaixo gera as chave privada e pública PERSISTENTES (RSA) que serão usadas para o diffie-helman posteriormente.

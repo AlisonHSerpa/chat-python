@@ -16,30 +16,24 @@ class Translate_Pem:
     Serve para tornar as chaves portáveis, garantir segurança e facilitar o armazenamento.'''
     @staticmethod
     def chave_para_pem(chave):
-        if isinstance(chave, rsa.RSAPrivateKey): # Chave privada RSA
+        '''Converte a chave para o formato PEM, dependendo se é uma chave privada ou pública.
+        Funciona para chaves RSA e Diffie-Hellman.'''
+
+        if isinstance(chave, (rsa.RSAPrivateKey, dh.DHPrivateKey)): # Verifica se a chave é privada
+            # Converte a chave privada para o formato PEM
             return chave.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.TraditionalOpenSSL,
                 encryption_algorithm=serialization.NoEncryption()
             )
-        elif isinstance(chave, rsa.RSAPublicKey): # Chave pública RSA
-            return chave.public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo
-            )
-        elif isinstance(chave, dh.DHPrivateKey): # Chave privada Diffie-Hellman
-            return chave.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-        elif isinstance(chave, dh.DHPublicKey): # Chave pública Diffie-Hellman
+        elif isinstance(chave, (rsa.RSAPublicKey, dh.DHPublicKey)): # Verifica se a chave é pública
+            # Converte a chave pública para o formato PEM
             return chave.public_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
             )
         else:
-            raise TypeError("Tipo de chave não suportado")
+            raise TypeError(f"Tipo de chave não suportado: {type(chave).__name__}")
 
     '''# O código abaixo recebe o conteúdo PEM (que já foi lido e inserido em uma variável)
     # e transforma de volta para uma chave privada ou pública. É o processo inverso da função acima.'''

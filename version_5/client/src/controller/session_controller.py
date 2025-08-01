@@ -1,6 +1,5 @@
 # version_5/client/src/controller/session_controller.py
 from ..service import WriterService
-from ..security import EncryptionRSA
 from ..model import SessionKey
 from ..model import MessageModel
 import base64
@@ -64,7 +63,7 @@ class SessionController:
         except Exception as e:
             print(f"Erro ao receber dados (separar_dados_dh): {e}")
     
-
+    @staticmethod
     def preparar_envio(parameters: bytes, salt: bytes, pem_public_key: bytes):
         # Codifica os dados em base64 para enviar via socket
         parametros_b64 = base64.b64encode(parameters) 
@@ -127,4 +126,3 @@ class SessionController:
             
             # Envia os dados para o destinatário via socket
             mensagem_encriptada = EncryptionRSA.encrypt_with_public_key(mensagem, peer_public_key)
-            
