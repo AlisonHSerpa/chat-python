@@ -75,7 +75,7 @@ class ChatView(tk.Toplevel):  # Ou tk.Tk se for a janela principal
         self.message_entry.delete("1.0", tk.END)
 
     def on_close(self):
-        self.controller.__del__()
+        self.controller.stop()
         self.destroy()
 
     def show_error(self, message):

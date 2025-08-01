@@ -20,38 +20,39 @@ class ServerController:
 
     def handle_new_connection(self, client_socket, client_address):
         """Processa a conexão inicial do cliente"""
-        try:
-            # Recebe o handshake de username
-            data = client_socket.recv(1500).decode()
+        while True:
+            try:
+                # Recebe o handshake de username
+                data = client_socket.recv(1500).decode()
 
-            if not data.strip():  # string vazia ou só espaços
-                return None
+                if not data.strip():  # string vazia ou só espaços
+                    break
+                mensagem = json.loads(data)
 
-            mensagem = json.loads(data)
+                cliente = None  # inicializa para evitar UnboundLocalError
 
-            cliente = None  # inicializa para evitar UnboundLocalError
+                if mensagem["type"] == "login":
+                    cliente = self.login_client(mensagem, client_socket, client_address)
+                    if cliente:
+                        self.model.clients.append(cliente)
+                        return cliente   # login feito, sai do loop
 
-            if mensagem["type"] == "login":
-                cliente = self.login_client(mensagem,client_socket,client_address)
+                elif mensagem["type"] == "sign up":
+                    resultado = self.sign_up_client(mensagem, client_socket, client_address)
+                    if isinstance(resultado, ClientModel):
+                        self.model.clients.append(resultado)
+                        return cliente  # cadastro feito com sucesso, sai do loop
+                    # senão, apenas espera nova mensagem
 
-            elif mensagem["type"] == "sign up":
-                cliente = self.sign_up_client(mensagem,client_socket,client_address)
+                else:
+                    break  # tipo desconhecido
 
-            else:
-                client_socket.close()
-                return None
+            except Exception as e:
+                print(f"Erro ao configurar novo cliente: {e}")
+                break
 
-            if cliente is None:
-                client_socket.close()
-                return None
-        
-            self.model.clients.append(cliente)
-            return cliente
-
-        except Exception as e:
-            print(f"Erro ao configurar novo cliente: {e}")
-            client_socket.close()
-            return None
+        client_socket.close()
+        return None
 
     def login_client(self, mensagem, client_socket, client_address):
         print(f"{client_address} chegou a tentar fazer login")
@@ -96,7 +97,7 @@ class ServerController:
         if not self.repository.get_client_by_username(mensagem["from"]) == None :
             response = MessageModel("erro","server",mensagem["from"],"username já existe")
             client_socket.sendall(response.get_message().encode())
-            return
+            return False
 
         dto = ClienteDTO(mensagem["from"], mensagem["body"])
         client_data = dto.make_json()  # agora retorna dicionário

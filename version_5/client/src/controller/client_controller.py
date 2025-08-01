@@ -1,3 +1,4 @@
+import sys
 from threading import Thread
 from .message_controller import MessageController
 from ..model import *
@@ -9,16 +10,22 @@ class ClientController:
     def __init__(self):
         ''' inicia toda a aplicacao criando cliente, interface e conexoes'''
         # conecta
-        MailService.connect_to_server()
-        self.chats = {}
-        self.online_users = []
-        self.model = ClientModel()
-        
-        # confere se o cliente foi bem iniciado, se n foi, fecha o programa
-        if not self.model.connected:
-            print("cliente não iniciado")
+  
+        if not MailService.connect_to_server():
+            print("Falha ao conectar ao servidor.")
             raise ConnectionError("Não foi possível conectar ao servidor.")
         
+        try:
+            self.model = ClientModel()
+
+            if not isinstance(self.model.username, str):
+                self.disconnect()
+        except Exception as e:
+            print(f"Falha ao iniciar o cliente: {e}")
+            MailService.disconnect()
+        
+        self.chats = {}
+        self.online_users = []
         self.view = ClientView(self)
 
         # threads de envio e recepção
@@ -93,8 +100,14 @@ class ClientController:
 
     def disconnect(self):
         """Desconecta do servidor"""
+        # Para todas as threads dos chats
+        for chat in self.chats.values():
+            chat.stop()  # <- garante que a thread de cada chat seja encerrada
+
         self.model.disconnect()
+        # MailService.socket.close()
         MailService.disconnect()
+        sys.exit(1)
 
     def run(self):
         """Inicia a aplicação"""

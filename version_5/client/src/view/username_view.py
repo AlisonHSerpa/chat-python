@@ -21,6 +21,8 @@ def ask_username(string):
     
     def on_close():
     # Janela fechada no X → deixa username como None e fecha a janela
+        nonlocal username
+        username = False
         window.destroy()
 
     # Configuração da janela

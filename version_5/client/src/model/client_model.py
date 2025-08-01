@@ -1,4 +1,4 @@
-import json
+import time
 import os
 from ..view import ask_username
 from ..security import *
@@ -44,6 +44,8 @@ class ClientModel:
                 self.sign_up()
         except Exception as e:
             print(f"erro ao iniciar cliente: {e}")
+            self.disconnect()
+            raise
 
     ''' Método para login no servidor
     O login é feito através de uma assinatura digital do desafio enviado pelo servidor.
@@ -80,18 +82,20 @@ class ClientModel:
                 print("Login aceito!")
                 self.connected = True
             else:
+                self.connected = False
                 raise ConnectionError("Login recusado pelo servidor.")
 
         except Exception as e:
             print(f"Erro no login: {e}")
             self.disconnect()
-
+            raise
 
     def sign_up(self, string = None):
         try:
             self.username = ask_username(string)  # Chama a janela gráfica
-        
-            if not self.username:
+
+            print(self.username)
+            if not isinstance(self.username, str):
                 print("username eh null")
                 self.disconnect()
                 return
@@ -105,17 +109,20 @@ class ClientModel:
             response = MailService.socket.recv(1024).decode()
             message = MessageModel.receive_data(response)
 
-            if message["type"] == "erro":
-                self.sign_up(message["body"])
-            elif message["type"] == "autorized":
+            if message["type"] == "autorized":
                 # escreve um user.txt
                 WriterService.write_client(self.jsonify())
                 print("cadastro realizado!")
                 self.connected = True
+            elif message["type"] == "erro":
+                # tenta de novo
+                time.sleep(1)
+                self.sign_up(message["body"])
 
         except Exception as e:
             print(f"Erro no cadastro: {e}")
-            self.disconnect()  
+            self.disconnect()
+            raise
 
     def disconnect(self):
         self.connected = False

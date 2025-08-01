@@ -94,6 +94,3 @@ class MessageController:
         self.running = False
         if self.update_thread and self.update_thread.is_alive():
             self.update_thread.join(timeout=1)
-
-    def __del__(self):
-        self.stop()

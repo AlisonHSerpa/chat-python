@@ -4,11 +4,14 @@ import json
 
 class MailService:
 
+    # ip do servidor
     host='127.0.0.1'
     port=8000
+
+    # tipo de socket
     socket = socket(AF_INET, SOCK_STREAM)
 
-    # ´feito para RETIRAR mensagens a serem recebidas [JSON]
+    # feito para RETIRAR mensagens a serem recebidas [JSON]
     mailbox = Queue()
 
     # feito para ENVIAR mensagens a serem enviadas [JSON]
@@ -18,10 +21,12 @@ class MailService:
     def connect_to_server():
         '''Conecta ao servidor'''
         try:
+            MailService.socket = socket(AF_INET, SOCK_STREAM)
             MailService.socket.connect((MailService.host, MailService.port))
+            return True
         except Exception as e:
             print(f'Erro ao conectar: {e}')
-            return str(e)
+            return False
 
     @staticmethod
     def listen():
