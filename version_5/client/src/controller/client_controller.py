@@ -26,8 +26,7 @@ class ClientController:
         
         self.chats = {}
         self.online_users = []
-       # nao deve salvar as chaves
-       # self.public_keys = {}
+
         self.view = ClientView(self)
 
         # threads de envio e recepção
@@ -68,8 +67,8 @@ class ClientController:
 
                 elif (message["type"] == "request_key"):
                     print()
-                    # chama o sessionservice para guardar
-                    # self.public_keys[message["from"]] = message["body"]
+                    # chama o sessionkeyservice para guardar
+                    SessionKeyService.insert_rsa_public_key(message["target"], message["body"])
 
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)
@@ -108,10 +107,17 @@ class ClientController:
         # Para todas as threads dos chats
         for chat in self.chats.values():
             chat.stop()  # <- garante que a thread de cada chat seja encerrada
+        
+        # para as threads de MailService
+        MailService.stop()
 
-        self.model.disconnect()
         # MailService.socket.close()
         MailService.disconnect()
+        
+        # disconnecta model
+        self.model.disconnect()
+        
+        # fecha o programa
         sys.exit(1)
 
     def run(self):
