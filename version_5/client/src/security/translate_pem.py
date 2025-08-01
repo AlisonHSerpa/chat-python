@@ -50,3 +50,21 @@ class Translate_Pem:
             )
         else:
             raise ValueError("Chave PEM inválida ou tipo desconhecido")
+        
+
+    @staticmethod
+    def param_to_pem(parameters):
+        # Recebe parâmetros e transforma em um arquivo PEM.
+        pem_parameters = parameters.parameter_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.ParameterFormat.PKCS3
+        )
+
+        return pem_parameters 
+    
+    @staticmethod
+    def pem_to_param(pem_parameters):
+        # Faz o oposto do processo acima
+        parameters = serialization.load_pem_parameters(pem_parameters)
+
+        return parameters
