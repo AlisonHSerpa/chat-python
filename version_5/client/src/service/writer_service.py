@@ -28,7 +28,7 @@ class WriterService:
             os.makedirs(folder)
 
         if json_data is None:
-            raise ValueError("erro ao tentar ler usuario")
+            raise ValueError("[read_client] erro ao tentar ler usuario")
 
         file_lock = WriterService._get_file_lock(diretorio)
         with file_lock:
@@ -36,7 +36,7 @@ class WriterService:
                 with open(diretorio, "w", encoding="utf-8") as f:
                     json.dump(json_data, f, indent=4)
             except Exception as e:
-                raise RuntimeError(f"Erro ao escrever o arquivo JSON: {e}")
+                raise RuntimeError(f"[write_client] Erro ao escrever o arquivo JSON: {e}")
 
     @staticmethod
     def read_client(diretorio=None):
@@ -62,24 +62,15 @@ class WriterService:
                     "local_key": data["local_key"]
                 }
             except FileNotFoundError:
-                raise FileNotFoundError(f"Arquivo '{diretorio}' não encontrado.")
+                raise FileNotFoundError(f"[read_client] Arquivo '{diretorio}' não encontrado.")
             except json.JSONDecodeError:
-                raise ValueError(f"O conteúdo do arquivo '{diretorio}' não é um JSON válido.")
+                raise ValueError(f"[read_client] O conteúdo do arquivo '{diretorio}' não é um JSON válido.")
             except Exception as e:
-                raise RuntimeError(f"Erro ao ler arquivo JSON: {e}")
+                raise RuntimeError(f"[read_client] Erro ao ler arquivo JSON: {e}")
 
-    '''
-        "username": self.username,
-        "peer_username": self.peer_username,
-        "aes_key": self.aes_key.decode('utf-8'),  # Chave AES em formato string
-        "hmac_key": self.hmac_key.decode('utf-8'),  # Chave HMAC em formato string
-        "creation_time": self.creation_time,
-        "expiration_seconds": self.expiration_seconds,
-        "remaining_messages": self.remaining_messages,
-        "valid": self.valid
-    '''
+
     @staticmethod
-    def write_session_key(json_session_key: str, username: str, path_file=None, modo='w'):
+    def insert_session_key(json_session_key: str, username: str, path_file=None, modo='w'):
         '''Salva a session key em arquivo — aceita apenas JSON string'''
         if path_file is None:
             path_file = WriterService.get_session_file_path(username)
@@ -123,11 +114,55 @@ class WriterService:
             except Exception as e:
                 print(f"[get_session_key] Erro: {e}")
                 return None
+            
+    @staticmethod
+    def insert_half_key(half_key_data: str, username : str, path_file=None, modo='w'):
+        '''Salva a half key em arquivo — aceita apenas JSON string'''
+        if path_file is None:
+            path_file = WriterService.get_half_key_file_path(username)
 
+        file_lock = WriterService._get_file_lock(path_file)
 
+        with file_lock:
+            try:
+                # Valida se a string é um JSON válido antes de salvar
+                json.loads(half_key_data)
+
+                dir_path = os.path.dirname(path_file)
+                if dir_path and not os.path.exists(dir_path):
+                    os.makedirs(dir_path)
+
+                with open(path_file, modo, encoding='utf-8') as arquivo:
+                    arquivo.write(half_key_data)
+
+                return True
+            except json.JSONDecodeError:
+                print("[insert_half_key] Erro: JSON inválido fornecido.")
+                return False
+            except Exception as e:
+                print(f"[insert_half_key] Erro ao escrever no arquivo: {e}")
+                return False
+
+    @staticmethod     
+    def get_half_key(username):
+        '''Procura e lê a half key e retorna como string JSON'''
+        path = WriterService.get_half_key_file_path(username)
+
+        if not os.path.exists(path):
+            return None
+
+        file_lock = WriterService._get_file_lock(path)
+
+        with file_lock:
+            try:
+                with open(path, 'r', encoding='utf-8') as file:
+                    return file.read()  # retorna string JSON
+            except Exception as e:
+                print(f"[get_half_key] Erro: {e}")
+                return None
 
     @staticmethod
-    def read_file(path_file, default_content=""):
+    def read_chat_history(path_file, default_content=""):
         ''' le os arquivos que guardam o historico de mensagens'''
         file_lock = WriterService._get_file_lock(path_file)
         with file_lock:
@@ -144,7 +179,7 @@ class WriterService:
                         arquivo.write(default_content)
                     return default_content
             except Exception as e:
-                print(f"Erro ao ler/criar arquivo: {e}")
+                print(f"[read_chat_history] Erro ao ler/criar arquivo: {e}")
                 return None
 
     @staticmethod
@@ -166,7 +201,7 @@ class WriterService:
                         arquivo.write(linha)
                 return True
             except Exception as e:
-                print(f"Error writing to file {file_path}: {e}")
+                print(f"[add_line] Error writing to file {file_path}: {e}")
                 return False
 
     @staticmethod
@@ -176,16 +211,16 @@ class WriterService:
             try:
                 json_message = json.loads(json_message)
             except json.JSONDecodeError as e:
-                print(f"save_message: erro ao decodificar JSON: {e}")
+                print(f"[save_message] erro ao decodificar JSON: {e}")
                 return False
 
         if not isinstance(json_message, dict):
-            print("save_message: json_message não é um dicionário")
+            print("[save_message] json_message não é um dicionário")
             return False
 
         required_keys = {"type", "from", "to", "body", "date", "time"}
         if not required_keys.issubset(json_message.keys()):
-            print("save_message: json_message está faltando campos obrigatórios")
+            print("[save_message] json_message está faltando campos obrigatórios")
             return False
 
         sender = str(json_message["from"])
@@ -204,16 +239,16 @@ class WriterService:
             try:
                 json_message = json.loads(json_message)
             except json.JSONDecodeError as e:
-                print(f"save_own_message: erro ao decodificar JSON: {e}")
+                print(f"[save_own_message] erro ao decodificar JSON: {e}")
                 return False
 
         if not isinstance(json_message, dict):
-            print("save_own_message: json_message não é um dicionário")
+            print("[save_own_message] json_message não é um dicionário")
             return False
 
         required_keys = {"type", "from", "to", "body", "date", "time"}
         if not required_keys.issubset(json_message.keys()):
-            print("save_own_message: json_message está faltando campos obrigatórios")
+            print("[save_own_message] json_message está faltando campos obrigatórios")
             print(json_message)
             return False
 
@@ -238,7 +273,11 @@ class WriterService:
     
     @staticmethod
     def get_session_file_path(target):
-        return os.path.join(WriterService.DATA_DIR, "temp", f"{target}.txt")
+        return os.path.join(WriterService.DATA_DIR, "sessionkey", f"{target}.txt")
+    
+    @staticmethod
+    def get_half_key_file_path(target):
+        return os.path.join(WriterService.DATA_DIR, "halfkey", f"{target}.txt")
     
 '''
 if __name__ == "__main__":

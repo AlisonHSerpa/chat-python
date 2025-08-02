@@ -39,6 +39,10 @@ class Translate_Pem:
     # e transforma de volta para uma chave privada ou pública. É o processo inverso da função acima.'''
     @staticmethod
     def receive_key(pem_key):
+        # Se for string, converte para bytes
+        if isinstance(pem_key, str):
+            pem_key = pem_key.encode('utf-8')
+
         if b"PRIVATE KEY" in pem_key:
             return serialization.load_pem_private_key(
                 pem_key,

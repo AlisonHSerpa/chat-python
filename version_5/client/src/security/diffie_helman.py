@@ -25,7 +25,7 @@ class Diffie_Helman:
     A chave privada é inserida na função Diffie-Helman e a pública é enviada para o destinatário via socket.'''
     @staticmethod
     def generate_temporary_keys(parameters):
-        private_key = dh.generate_private_key(parameters) # Gera a chave privada temporária
+        private_key = parameters.generate_private_key() # Gera a chave privada temporária
         public_key = private_key.public_key() # Gera a chave pública temporária
 
         return private_key, public_key
@@ -34,6 +34,7 @@ class Diffie_Helman:
     Ele deve ser único para cada sessão de Diffie-Hellman.
     O salt é usado para derivar a chave compartilhada e deve ser armazenado junto com a chave compartilhada.
     O salt é enviado junto com a chave pública do destinatário para que ele possa derivar a mesma chave compartilhada.'''
+    @staticmethod
     def generate_salt():
         return os.urandom(16)
 
@@ -43,7 +44,7 @@ class Diffie_Helman:
     dados de forma segura.
     O método recebe tanto as chaves quanto o Salt, que é usado para derivar a chave compartilhada.'''
     @staticmethod
-    def diffie_Helman(temp_private_key: bytes, temp_peer_public_key: bytes, Salt: bytes):
+    def exchange_and_derive_key(temp_private_key: bytes, temp_peer_public_key: bytes, Salt: bytes):
         # A chave compartilhada é gerada a partir da chave privada do usuário e da chave pública do destinatário.
         shared_key = temp_private_key.exchange(temp_peer_public_key)
         # A chave compartilhada é derivada usando HKDF, com o Salt, para criar uma chave de 64 bytes.
@@ -60,3 +61,27 @@ class Diffie_Helman:
         
         return  aes_key, hmac_key # Retorna a chave de encriptação, a chave de autenticação  
     
+'''
+# -------------------------------------------------------
+# TESTE AUTOMÁTICO AO EXECUTAR DIRETAMENTE O SCRIPT
+# -------------------------------------------------------
+
+if __name__ == "__main__":
+    print("[*] Iniciando teste de troca de chaves Diffie-Hellman...")
+
+    # Geração de parâmetros e chaves
+    params = Diffie_Helman.generate_parameters()
+    priv1, pub1 = Diffie_Helman.generate_temporary_keys(params)
+    priv2, pub2 = Diffie_Helman.generate_temporary_keys(params)
+    salt = Diffie_Helman.generate_salt()
+
+    # Derivação dos dois lados
+    aes1, hmac1 = Diffie_Helman.exchange_and_derive_key(priv1, pub2, salt)
+    aes2, hmac2 = Diffie_Helman.exchange_and_derive_key(priv2, pub1, salt)
+
+    # Verificações
+    assert aes1 == aes2, "Erro: AES keys diferentes!"
+    assert hmac1 == hmac2, "Erro: HMAC keys diferentes!"
+
+    print("[✔] Chaves derivadas coincidem. Teste concluído com sucesso.")
+#'''

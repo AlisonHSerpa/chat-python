@@ -4,7 +4,7 @@ from .message_controller import MessageController
 from ..model import *
 from ..view import ClientView
 from ..service import*
-from .session_controller import SessionController
+from .session_controller2 import SessionController2
 from ..security import *
 
 class ClientController:
@@ -47,30 +47,28 @@ class ClientController:
             if (message["to"] == self.model.username):
 
                 if (message["type"] == "message"):
-                    message['body'] = Encrypt_DH.recebe_mensagem(message['body'])
+                    # desencripta e depois salva a mensagem
+                    Encrypt_DH.recebe_ciphertext(message["body"], message["from"])
                     WriterService.save_message()
 
                 elif (message["type"] == "session_key"): 
                     '''Esse método é chamado para receber a chave pública do 
                     destinatário, o salt e os parâmetros para serem usados no Diffie-Hellman.'''
-
-                    return_message = SessionController.separar_dados_dh(message["body"], message["nome"]) 
-                    
-                    # Enfim, é enviada a chave pública para o destinatário.
-                    MailService.socket.sendall(return_message.get_message().encode())
+                    SessionController2.separar_dados_dh(message)
+                    print("tentando fazer session key") 
 
                 elif (message["type"] == "session_key_response"):
                     '''Esse método é chamado para receber APENAS a chave pública do remetente.'''
-
-                    SessionController.separar_dados_dh(message["body"], message["nome"])
+                    SessionController2.completar_session_key(message["body"], message["nome"])
+                    print("public key resposta coletada")
                 
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
 
                 elif (message["type"] == "request_key"):
-                    print(message)
                     # chama o sessionkeyservice para guardar
                     SessionKeyService.insert_rsa_public_key(message["from"], message["body"])
+                    print("request feito")
 
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)

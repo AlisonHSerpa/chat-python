@@ -2,6 +2,7 @@ from ..model import MessageModel
 from .mail_service import MailService
 from .writer_service import WriterService
 import json
+import time
 
 class SessionKeyService:
 
@@ -31,16 +32,37 @@ class SessionKeyService:
 
 
     @staticmethod
-    def verificar_rsa_pub_key(username, target):
-        ''' verifica se tem rsa_pub_key, se não tiver, pede e retorna falso'''
-        # procura do dicionario o target para devolver sua rsa_pub_key
+    def verificar_rsa_pub_key(username, target, interval=0.5, timeout=None):
+        """
+        Verifica e aguarda até obter a chave pública RSA do target.
+        Envia o request apenas uma vez. Espera até receber a chave.
+        """
+        # Se já estiver disponível, retorna imediatamente
         if target in SessionKeyService.rsa_public_keys:
             return SessionKeyService.rsa_public_keys[target]
-        else:
-            SessionKeyService.request_public_key(username , target)
-            return False
 
-   
+        # Envia o request uma única vez
+        print(f"[verificar_rsa_pub_key] Solicitando chave pública de {target}...")
+        SessionKeyService.request_public_key(username, target)
+
+        # Começa a espera
+        start_time = time.time()
+        while True:
+            if target in SessionKeyService.rsa_public_keys:
+                print(f"[verificar_rsa_pub_key] Chave de {target} recebida.")
+                return SessionKeyService.rsa_public_keys[target]
+
+            if timeout is not None and (time.time() - start_time > timeout):
+                raise TimeoutError(f"Timeout esperando chave pública de {target}")
+
+            time.sleep(interval)
+
+
+    @staticmethod
+    def iniciar_DH(target):
+        from ..controller import SessionController2
+        SessionController2.enviar_um_resquet_dh(target, SessionKeyService.rsa_public_keys[target])
+
     @staticmethod
     def insert_rsa_public_key(target, rsa_pub_key):
         ''' Recebe e salva rsa_pub_key e começar o DH em SessionController '''

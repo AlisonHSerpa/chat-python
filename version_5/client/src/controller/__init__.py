@@ -1,4 +1,4 @@
 from .client_controller import ClientController
-from .session_controller import SessionController
+from .session_controller2 import SessionController2
 
-__all__ = ['ClientController', 'SessionController']
+__all__ = ['ClientController', 'SessionController2']
