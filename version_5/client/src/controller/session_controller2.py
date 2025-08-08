@@ -1,4 +1,4 @@
-from ..security import*
+from ..security import *
 from ..model import HalfKey
 from ..model import SessionKey
 import base64
@@ -8,7 +8,7 @@ class SessionController2:
     # diffie helman 1
     # rsa_pub_key precisa estar em pem
     @staticmethod
-    def enviar_um_resquet_dh(target : str , rsa_pub_key):
+    def enviar_um_request_dh(target : str, rsa_pub_key):
         # Chama uma função para gerar os parãmetros, as chaves pública e privada diffie helman, e o Salt.
         parameters = Diffie_Helman.generate_parameters()
         dh_private_key, dh_public_key = Diffie_Helman.generate_temporary_keys(parameters)
@@ -24,40 +24,48 @@ class SessionController2:
 
     @staticmethod
     def encriptar_chaves_geradas(salt : bytes, pem_parameters, pem_public_key, half_key, rsa_pub_key):
-        from ..model import MessageDH
         from ..service import WriterService
         from ..service import MailService
 
-        param64, salt64, key64 = SessionController2._passar_para_b64(pem_parameters, salt, pem_public_key)
+        # Gera uma chave em formato AES para encriptar todas as informações
+        aes_key = AESEncryptor.generate_key() # Gera uma chave AES para encriptar os parâmetros que serão enviados pelo diffie helman
+        iv = AESEncryptor.generate_iv() # iv para encriptação aes
 
-        # Logo após, a mensagem deve ser encriptada com a chave pública rsa do destinatário.
-        cript_param64 = EncryptionRSA.encrypt_with_public_key(param64, rsa_pub_key)
-        cript_salt64 = EncryptionRSA.encrypt_with_public_key(salt64, rsa_pub_key)
-        cript_key64 = EncryptionRSA.encrypt_with_public_key(key64, rsa_pub_key)
+        # Encripta as informações (parâmetros, salt e chave pública temporária com a chave AES)
+        cript_param = AESEncryptor.encrypt(pem_parameters, aes_key, iv)
+        cript_salt = AESEncryptor.encrypt(salt, aes_key, iv)
+        cript_temp_pub = AESEncryptor.encrypt(pem_public_key, aes_key, iv)
 
-        # Após a mensagem ser encriptada, ela deve ser novamente encodada em base64 e utf-8, 
-        # para poder ser inserida no json da mensagem.
-        b64cript_param64 = base64.b64encode(cript_param64).decode('utf-8') 
-        b64cript_salt64 = base64.b64encode(cript_salt64).decode('utf-8') 
-        b64cript_key64 = base64.b64encode(cript_key64).decode('utf-8') 
+        # É encriptada a chave AES com a chave RSA (funciona melhor assim, pois a chave AES é pequena o suficiente para ser encriptada pela RSA)
+        aes_key_rsa = EncryptionRSA.encrypt_with_public_key(aes_key, rsa_pub_key)
 
         # É também recebido o nome do remetente, para que a mensagem possa ser identificada.
         user = WriterService.read_client()
         origin_name = user["username"]
 
-        # Cria a mensagem com o tipo "session_key" e envia para o destinatário.
-        # A mensagem é criada com o nome do remetente, o nome do destinatário e o corpo da mensagem.
-        # O destino é o usuário com quem a sessão está sendo estabelecida, que irá receber os 
-        # parâmetros e o salt.
-        final_message = MessageDH("session_key", origin_name, half_key["usuario_alvo"], b64cript_param64, b64cript_salt64, b64cript_key64)
-        MailService.send_to_mailman(final_message.get_message().encode())
+        # Basicamente a chave os parâmetros E O SALT são encriptados com uma chave gerada AES, chave essa que será ser encriptada com a chave RSA.
+        # A chave AES, que é encriptada com RSA, é inserida na estrutura da mensagem e enviada junto.
+        # A mensagem deve ter a estrutura abaixo
+        
+        data = {
+            "param" : cript_param,
+            "salt" : cript_salt,
+            "key" : cript_temp_pub,
+            "aes" : aes_key_rsa,
+            "iv" : iv
+        }
+        
+        MailService.send_to_mailman(data.encode())
 
     # diff hellman 2 comeca aqui, ele recebe a mensagem tipo MessageDH
     @staticmethod
     def separar_dados_dh(data):
         '''Esse método recebe o body da mensagem com a informação enviada pelo destinatário.
-        A informação está encriptada com a chave pública do destinatário, então deve ser descriptografada
-        com a chave privada do usuário.'''
+        A chave AES está encriptada com a chave pública RSA do destinatário, então deve ser descriptografada
+        com a chave privada RSA do usuário que recebeu a mensagem.
+        
+        As informações foram encriptadas com a chave AES, quye após ser desencritada, será usada para desencriptar o resto das informações
+        '''
         from ..model import MessageModel
         from ..service import WriterService
         from ..service import MailService
@@ -66,52 +74,79 @@ class SessionController2:
         try:
             user = WriterService.read_client()
 
-            # Descriptografa os dados usando a chave privada do usuário
-            parametros_b64 = EncryptionRSA.decrypt_with_private_key(data["parametros"]).decode('utf-8')
-            salt_b64 = EncryptionRSA.decrypt_with_private_key(data["salt"]).decode('utf-8')
-            key_b64 = EncryptionRSA.decrypt_with_private_key(data["key"]).decode('utf-8')
+            # Desencripta a chave AES com a chave privada RSA do usuário, garantindo que apenas ele poderádata
+            aes_DH2 = EncryptionRSA.decrypt_with_private_key(data["aes"])
+            print("Chave AES desencriptada!")
 
-            # Depois de separar, as variáveis são re-codificadas para bytes.
-            parametros = base64.b64decode(parametros_b64)
-            salt = base64.b64decode(salt_b64)
-            chave_publica = base64.b64decode(key_b64)
+            # Após desencriptada, a chave AES pode ser usada pra desencriptar o resto das informações
+            param_pem = AESEncryptor.decrypt(data["param"], aes_DH2, data["iv"])
+            salt = AESEncryptor.decrypt(data["salt"], aes_DH2, data["iv"])
+            chave_dh_pub_pem = AESEncryptor.decrypt(data["key"], aes_DH2, data["iv"])
+            print("Info da mensagem desencriptado com chave AES")
 
-            # depois
-            pem_public_key = SessionKey(data["from"], parametros, salt, chave_publica)
-            dh_public_key = pem_public_key.primeiro_aes_e_hmac() # ta em bytes
+            # Agora que possuímos os parâmetros, faremos as nossas próprias chaves pública e privada dh.
+            param = Translate_Pem.pem_to_param(param_pem)
+            priv_key_dh2, pub_key_dh2 = Diffie_Helman.generate_temporary_keys(param)
+            print("Chaves privada e pública do Diffie Helman 2 criadas!")
 
-            # faz ser serializavel
-            b64_dh_response_public_key = base64.b64encode(dh_public_key).decode('utf-8')
+            # Com as chaves pública dh1 e privada dh2, poderemos fazer as nossas chaves AES e HMAC.
+            pub_key_dh1 = Translate_Pem.receive_key(chave_dh_pub_pem)
+            aes_session_DH2, hmac_session_DH2 = Diffie_Helman.exchange_and_derive_key(priv_key_dh2, pub_key_dh1, salt)
+            print("Chaves AES e HMAC foram criadas no diffie helman 2!")
 
-            # pega a publica do cara
+            # Aqui ficará o método onde as chaves AES e HMAC temporárias serão armazenadas.
+
+
+            # Para enviarmos a chave pública DH2, precisaremos antes gerar uma chave AES própria nossa, encriptar a chave pub dh2, e enviar ambas numa mensagem.
+            aes_key = AESEncryptor.generate_key()
+            iv = AESEncryptor.generate_iv()
+
+            # Traduzimos a chave pub dh2 para formato .pem
+            pem_pub_key_dh2 = Translate_Pem.chave_para_pem(pub_key_dh2)
+
+            # Encriptamos a pem pub key dh2 com a chave AES
+            cript_temp_pub = AESEncryptor.encrypt(pem_pub_key_dh2, aes_key, iv)
+
+            # Encriptamos a chave AES com a chave pública rsa do destinatário.
             peer_public_key = SessionKeyService.verificar_rsa_pub_key(user["username"], data["from"])
+            aes_key_rsa = EncryptionRSA.encrypt_with_public_key(aes_key, peer_public_key)
 
-            b64_dh_response_public_key_encrypted = EncryptionRSA.encrypt_with_public_key(b64_dh_response_public_key, peer_public_key)
+            response = {
+            "key" : cript_temp_pub,
+            "aes" : aes_key_rsa,
+            "iv" : iv
+            }
 
-            response = MessageModel("session_key_response",user["username"], data["from"], b64_dh_response_public_key_encrypted)
-            MailService.send_to_mailman(response.get_message().encode())
-
+            MailService.send_to_mailman(response.encode())
+            print("Mensagem resposta foi criada!")
         except Exception as e:
             print(f"Erro ao receber dados (separar_dados_dh): {e}")
 
     @staticmethod
-    def completar_session_key(target, b64_dh_response_public_key_encrypted):
+    def completar_session_key(target, aes, key, iv):
+        # A função recebe a chave aes, a chave pública dh2 e o iv da mensagem para serem desencriptados e usados para o diffie helman 3.
         from ..service import WriterService
         data = WriterService.read_client()
 
-        # desencripta com a chave privada
-        b64_dh_response_public_key  =EncryptionRSA.decrypt_with_private_key(b64_dh_response_public_key_encrypted, data["private_key"])
+        # Extraímos a chave AES e desencriptamos ela com nossa chave RSA privada.
+        aes_DH2 = EncryptionRSA.decrypt_with_private_key(aes)
+        temp_pub_pem = AESEncryptor.decrypt(key, aes_DH2, iv)
+        print('Chave AES foi desencriptada no diffie helman 3!')
 
-        # tira a resposta da base64 para bytes
-        chave_publica_resposta = base64.b64decode(b64_dh_response_public_key)
-
+        pub_key_dh2 = Translate_Pem.pem_to_chave(temp_pub_pem)
+        
         # recolhe de volta os dados da chave
         half_key_data = WriterService.get_half_key(target)
-        dh_private_key , salt = HalfKey.get_data_in_bytes(half_key_data)
+        priv_key_dh1, salt = HalfKey.get_data_in_bytes(half_key_data)
 
         # faz a sua session key
-        session_key = SessionKey(target)
-        session_key.segunda_aes_e_hmac(chave_publica_resposta, dh_private_key, salt)
+        aes_dh3, hmac_dh3 = Diffie_Helman.exchange_and_derive_key(priv_key_dh1, pub_key_dh2, salt)
+        print("Chaves AES e HMAC foram geradas no diffie helman 3!")
+
+        # Aqui será o método que irá armazenar as chaves AES e HMAC.
+
+
+
 
     ''' metodo auxiliar '''
     @staticmethod

@@ -61,7 +61,7 @@ class SessionKeyService:
     @staticmethod
     def iniciar_DH(target):
         from ..controller import SessionController2
-        SessionController2.enviar_um_resquet_dh(target, SessionKeyService.rsa_public_keys[target])
+        SessionController2.enviar_um_request_dh(target, SessionKeyService.rsa_public_keys[target])
 
     @staticmethod
     def insert_rsa_public_key(target, rsa_pub_key):

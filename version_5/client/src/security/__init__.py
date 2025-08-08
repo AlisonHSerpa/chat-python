@@ -4,5 +4,6 @@ from .diffie_helman import Diffie_Helman
 from .encrypt_rsa import EncryptionRSA
 from .sign_message import Assinatura
 from .encrypt_dh import Encrypt_DH
+from .aes_key_gen import AESEncryptor
 
-__all__ = ['Keygen', 'Translate_Pem', 'Diffie_Helman', 'EncryptionRSA', 'Assinatura', 'Encrypt_DH']
+__all__ = ['Keygen', 'Translate_Pem', 'Diffie_Helman', 'EncryptionRSA', 'Assinatura', 'Encrypt_DH', 'AESEncryptor']
