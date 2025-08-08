@@ -53,7 +53,9 @@ class ClientController:
 
                 elif (message["type"] == "session_key"): 
                     '''Esse método é chamado para receber a chave pública do 
-                    destinatário, o salt e os parâmetros para serem usados no Diffie-Hellman.'''
+                    destinatário, o salt e os parâmetros para serem usados no Diffie-Hellman.
+                    
+                    A lógica atual irá receber os dados'''
                     SessionController2.separar_dados_dh(message)
                     print("tentando fazer session key") 
 
