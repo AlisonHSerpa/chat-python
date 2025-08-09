@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 
 class MessageModel:
-    def __init__(self, type, origin, destiny, body, key = None, param = None, aes = None, iv = None):
+    def __init__(self, type, origin, destiny, body, key = None, param = None, aes = None, iv = None, public_key = None):
         now = datetime.now()
         self.message = {
             "type" : type,
@@ -13,6 +13,7 @@ class MessageModel:
             "param" : param,
             "aes" : aes,
             "iv" : iv ,
+            "public_key" : public_key,
             "date" : now.date().isoformat(),
             "time" : now.strftime("%H:%M")
         }

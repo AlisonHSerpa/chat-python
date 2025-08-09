@@ -61,8 +61,8 @@ class ClientController:
 
                 elif (message["type"] == "DH_2"):
                     '''Esse método é chamado para receber APENAS a chave pública do remetente.'''
-                    SessionController2.diffie_hellman_3(message)
                     print("public key resposta coletada")
+                    SessionController2.diffie_hellman_3(message)
                     print(message)
                 
                 elif (message["type"] == "userlist"):

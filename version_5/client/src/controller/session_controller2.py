@@ -14,12 +14,12 @@ class SessionController2:
         dh_private_key, dh_public_key = Diffie_Helman.generate_temporary_keys(parameters)
         salt = Diffie_Helman.generate_salt()
 
-        # cria e salva metade da chave
-        half_key = HalfKey(target, salt, dh_private_key)
-
         # Os parãmetros e a chave pública dh são transformados em formato PEM para transporte seguro
         pem_public_key = Translate_Pem.chave_para_pem(dh_public_key)
         pem_parameters = Translate_Pem.param_to_pem(parameters)
+
+        # cria e salva metade da chave
+        half_key = HalfKey(target, salt, dh_private_key)
 
         SessionController2.encriptar_chaves_geradas(salt, pem_parameters ,pem_public_key, half_key.target, pem_rsa_pub_key)
 
@@ -45,6 +45,7 @@ class SessionController2:
         # É também recebido o nome do remetente, para que a mensagem possa ser identificada.
         user = WriterService.read_client()
         origin = user["username"]
+        public_key = user["public_key"]
 
         # Basicamente a chave os parâmetros E O SALT são encriptados com uma chave gerada AES, chave essa que será ser encriptada com a chave RSA.
         # A chave AES, que é encriptada com RSA, é inserida na estrutura da mensagem e enviada junto.
@@ -61,10 +62,11 @@ class SessionController2:
             "param" : cript_param,
             "aes" : aes_key_rsa,
             "iv" : iv
+            "public_key" : public_key,
         }
         '''
         print("DH 1 enviado")
-        response = MessageModel("DH_1", origin, target, cript_salt, cript_temp_pub, cript_param, aes_key_rsa, base64.b64encode(iv).decode("utf-8"))
+        response = MessageModel("DH_1", origin, target, cript_salt, cript_temp_pub, cript_param, aes_key_rsa, base64.b64encode(iv).decode("utf-8"), public_key)
         print(response.get_message())
         MailService.send_to_mailman(response.get_message())
 
@@ -92,6 +94,7 @@ class SessionController2:
             cript_param = base64.b64decode(data["param"])
             aes_rsa = base64.b64decode(data["aes"])
             iv = base64.b64decode(data["iv"])
+            target_public_key = data["public_key"]
 
             # Desencripta a chave AES com a chave privada RSA do usuário, garantindo que apenas ele poderá
             aes_DH2 = EncryptionRSA.decrypt_with_private_key(aes_rsa, rsa_priv_key_user)
@@ -128,7 +131,7 @@ class SessionController2:
             cript_temp_pub = base64.b64encode(AESEncryptor.encrypt(pem_pub_key_dh2, aes_key, iv)).decode("utf-8")
 
             # Encriptamos a chave AES com a chave pública rsa do destinatário.
-            peer_public_key = SessionKeyService.verificar_rsa_pub_key(origin, target)
+            peer_public_key = Translate_Pem.pem_to_chave(target_public_key)
             aes_key_rsa = base64.b64encode(EncryptionRSA.encrypt_with_public_key(aes_key, peer_public_key)).decode("utf-8")
 
             ''''
@@ -149,35 +152,65 @@ class SessionController2:
             response = MessageModel("DH_2", origin, target, "", cript_temp_pub, "", aes_key_rsa, base64.b64encode(iv).decode("utf-8"))
             MailService.send_to_mailman(response.get_message())
             print("Mensagem resposta foi criada!")
+            print(response.get_message())
         except Exception as e:
             print(f"Erro ao receber dados [diffie hellman 2]: {e}")
 
     @staticmethod
     def diffie_hellman_3(data):
-        # A função recebe a chave aes, a chave pública dh2 e o iv da mensagem para serem desencriptados e usados para o diffie helman 3.
+        """Completa o handshake DH usando a half key armazenada"""
         from ..service import WriterService
-        user = WriterService.read_client()
-        private_key = Translate_Pem.pem_to_chave(user["private_key"])
-        target = data["to"]
-        aes = base64.b64decode(data["aes"])
-        iv = base64.b64decode(data["iv"])
-        key = base64.b64decode(data["key"])
-
-        # Extraímos a chave AES e desencriptamos ela com nossa chave RSA privada.
-        aes_DH2 = EncryptionRSA.decrypt_with_private_key(aes, private_key)
-        temp_pub_pem = AESEncryptor.decrypt(key, aes_DH2, iv)
-        print('Chave AES foi desencriptada no diffie helman 3!')
-
-        pub_key_dh2 = Translate_Pem.pem_to_chave(temp_pub_pem)
+        from ..model import SessionKey
         
-        # recolhe de volta os dados da chave
-        half_key_data = WriterService.get_half_key(target)
-        priv_key_dh1, salt = HalfKey.get_data_in_bytes(half_key_data)
-
-        # faz a sua session key
-        aes_dh3, hmac_dh3 = Diffie_Helman.exchange_and_derive_key(priv_key_dh1, pub_key_dh2, salt)
-        print("Chaves AES e HMAC foram geradas no diffie helman 3!")
-
-        # Aqui será o método que irá armazenar as chaves AES e HMAC.
-        session_key = SessionKey(target, aes_dh3, hmac_dh3)
-        print(f"SESSION KEY CRIADA: \n {session_key.aes}")
+        try:
+            user = WriterService.read_client()
+            current_user = user["username"]
+            
+            # Verifica se a mensagem é para este usuário
+            if data["to"] != current_user:
+                print("Mensagem DH_3 não é para este usuário")
+                return
+                
+            private_key = Translate_Pem.pem_to_chave(user["private_key"])
+            target = data["from"]  # O remetente é quem enviou DH2
+            
+            # Processa os dados criptografados
+            aes = base64.b64decode(data["aes"])
+            iv = base64.b64decode(data["iv"])
+            encrypted_dh2_pub = base64.b64decode(data["key"])
+            
+            # Descriptografa a chave AES
+            aes_key = EncryptionRSA.decrypt_with_private_key(aes, private_key)
+            dh2_pub_pem = AESEncryptor.decrypt(encrypted_dh2_pub, aes_key, iv)
+            
+            # Converte para objeto de chave pública
+            pub_key_dh2 = Translate_Pem.pem_to_chave(dh2_pub_pem)
+            
+            # Obtém a half key local (já em formato JSON/dict)
+            half_key_data = WriterService.get_half_key(target)
+            if not half_key_data:
+                raise ValueError(f"Half key para {target} não encontrada")
+                
+            # Desserializa a chave privada DH1 (retorna PEM bytes + salt)
+            dh1_priv_pem, salt = HalfKey.get_data_in_bytes(half_key_data)
+            
+            # Converte PEM para objeto de chave
+            dh1_priv_key = Translate_Pem.pem_to_chave(dh1_priv_pem)
+            
+            # Deriva as chaves de sessão
+            aes_key, hmac_key = Diffie_Helman.exchange_and_derive_key(
+                dh1_priv_key, 
+                pub_key_dh2, 
+                salt
+            )
+            
+            # Armazena a chave de sessão
+            session_key = SessionKey(target, aes_key, hmac_key)
+            print(f"Session key estabelecida com {target}")
+            
+            # Limpa a half key após uso (opcional)
+            WriterService.insert_half_key("", target, modo="w")
+            
+        except Exception as e:
+            print(f"Erro no DH3: {str(e)}")
+            raise

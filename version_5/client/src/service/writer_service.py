@@ -116,8 +116,8 @@ class WriterService:
                 return None
             
     @staticmethod
-    def insert_half_key(half_key_data: str, username : str, path_file=None, modo='w'):
-        '''Salva a half key em arquivo — aceita apenas JSON string'''
+    def insert_half_key(half_key_data, username: str, path_file=None, modo='w'):
+        '''Salva a half key em arquivo - aceita dict ou JSON string'''
         if path_file is None:
             path_file = WriterService.get_half_key_file_path(username)
 
@@ -125,19 +125,24 @@ class WriterService:
 
         with file_lock:
             try:
-                # Valida se a string é um JSON válido antes de salvar
-                json.loads(half_key_data)
+                # Converte dict para JSON string se necessário
+                if isinstance(half_key_data, dict):
+                    json_str = json.dumps(half_key_data)
+                else:
+                    json_str = half_key_data
+                    # Valida se é JSON válido
+                    json.loads(json_str)
 
                 dir_path = os.path.dirname(path_file)
                 if dir_path and not os.path.exists(dir_path):
                     os.makedirs(dir_path)
 
                 with open(path_file, modo, encoding='utf-8') as arquivo:
-                    arquivo.write(half_key_data)
+                    arquivo.write(json_str)
 
                 return True
-            except json.JSONDecodeError:
-                print("[insert_half_key] Erro: JSON inválido fornecido.")
+            except (TypeError, json.JSONDecodeError) as e:
+                print(f"[insert_half_key] Erro no formato dos dados: {e}")
                 return False
             except Exception as e:
                 print(f"[insert_half_key] Erro ao escrever no arquivo: {e}")

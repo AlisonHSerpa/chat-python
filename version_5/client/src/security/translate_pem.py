@@ -1,6 +1,8 @@
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, dh
 
 
 class Translate_Pem:
@@ -17,17 +19,26 @@ class Translate_Pem:
     @staticmethod
     def chave_para_pem(chave):
         '''Converte a chave para o formato PEM, dependendo se é uma chave privada ou pública.
-        Funciona para chaves RSA e Diffie-Hellman.'''
-
-        if isinstance(chave, (rsa.RSAPrivateKey, dh.DHPrivateKey)): # Verifica se a chave é privada
-            # Converte a chave privada para o formato PEM
+        Funciona para chaves RSA e Diffie-Hellman.
+        
+        Args:
+            chave: Objeto de chave criptográfica (RSA ou DH)
+            
+        Returns:
+            bytes: Chave no formato PEM
+            
+        Raises:
+            TypeError: Se o tipo de chave não for suportado
+        '''
+        if isinstance(chave, (rsa.RSAPrivateKey, dh.DHPrivateKey)):
+            # Serialização de chave privada
             return chave.private_bytes(
                 encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                format=serialization.PrivateFormat.PKCS8,  # Alterado para PKCS8
                 encryption_algorithm=serialization.NoEncryption()
             )
-        elif isinstance(chave, (rsa.RSAPublicKey, dh.DHPublicKey)): # Verifica se a chave é pública
-            # Converte a chave pública para o formato PEM
+        elif isinstance(chave, (rsa.RSAPublicKey, dh.DHPublicKey)):
+            # Serialização de chave pública
             return chave.public_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
