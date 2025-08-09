@@ -37,7 +37,7 @@ class MailService:
         '''Recebe todas as mensagens e coloca na mailbox'''
         while MailService.running:
             try:
-                response = MailService.socket.recv(1500).decode()
+                response = MailService.socket.recv(4096).decode()
                 if not response:
                     break
                 try:
@@ -57,7 +57,7 @@ class MailService:
             try:
                 mensagem = MailService.mailman.get(block=True)
                 MailService.socket.send(mensagem.encode())
-
+                print("enviado")
             except Exception as e:
                 print(f'Erro ao enviar mensagem: {e}')
                 break
@@ -66,6 +66,7 @@ class MailService:
     def send_to_mailman(message):
         ''' COLOCA na fila uma mensagem para ENVIO'''
         MailService.mailman.put(message)
+        print("mandado para o carteiro")
 
     @staticmethod
     def take_from_mailbox():

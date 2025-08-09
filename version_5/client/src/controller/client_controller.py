@@ -11,7 +11,9 @@ class ClientController:
     def __init__(self):
         ''' inicia toda a aplicacao criando cliente, interface e conexoes'''
         # conecta
-  
+        self.chats = {}
+        self.online_users = []
+        
         if not MailService.connect_to_server():
             print("Falha ao conectar ao servidor.")
             raise ConnectionError("Não foi possível conectar ao servidor.")
@@ -23,10 +25,7 @@ class ClientController:
                 self.disconnect()
         except Exception as e:
             print(f"Falha ao iniciar o cliente: {e}")
-            MailService.disconnect()
-        
-        self.chats = {}
-        self.online_users = []
+            self.disconnect()
 
         self.view = ClientView(self)
 
@@ -48,21 +47,23 @@ class ClientController:
 
                 if (message["type"] == "message"):
                     # desencripta e depois salva a mensagem
-                    Encrypt_DH.recebe_ciphertext(message["body"], message["from"])
-                    WriterService.save_message()
+                    #Encrypt_DH.recebe_ciphertext(message["body"], message["from"])
+                    WriterService.save_message(message)
 
-                elif (message["type"] == "session_key"): 
+                elif (message["type"] == "DH_1"): 
                     '''Esse método é chamado para receber a chave pública do 
                     destinatário, o salt e os parâmetros para serem usados no Diffie-Hellman.
                     
                     A lógica atual irá receber os dados'''
-                    SessionController2.separar_dados_dh(message)
-                    print("tentando fazer session key") 
+                    print("tentando fazer session key")
+                    SessionController2.diffie_hellman_2(message)
+                    print(message) 
 
-                elif (message["type"] == "session_key_response"):
+                elif (message["type"] == "DH_2"):
                     '''Esse método é chamado para receber APENAS a chave pública do remetente.'''
-                    SessionController2.completar_session_key(message["body"], message["nome"])
+                    SessionController2.diffie_hellman_3(message)
                     print("public key resposta coletada")
+                    print(message)
                 
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
@@ -71,6 +72,8 @@ class ClientController:
                     # chama o sessionkeyservice para guardar
                     SessionKeyService.insert_rsa_public_key(message["from"], message["body"])
                     print("request feito")
+                elif (message["type"] == "error"):
+                    print(message)
 
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)

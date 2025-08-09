@@ -16,11 +16,15 @@ class MessageController:
         self.diretorio = WriterService.get_chat_file_path(self.target)
         self.running = True
         self.update_thread = None
+        self.peer_pub_key = SessionKeyService.verificar_rsa_pub_key(self.model.username ,self.target)
+
+        print("verificando chave de sessao")
+        self.session_key = SessionKeyService.verificar_session_key(self.target)
+        if not self.session_key:
+            print("dh iniciado")
+            SessionKeyService.iniciar_DH(self.target)
+
         self._chat_lock = threading.Lock()
-        
-        # chaves para encriptar
-        self.peer_pub_key = None
-        self.session_key = None
 
         # Garante que o arquivo existe de forma thread-safe
         WriterService.read_chat_history(self.diretorio)
@@ -40,13 +44,16 @@ class MessageController:
         body = self.view.get_message_input()
         if not body:
             return
-
+        
+        '''
         aes = base64.decode(self.session_key["aes_key"])
         hmac = base64.decode(self.session_key["hmac_key"])
 
         # Aqui cabe criptografar a mensagem (plaintext : str, aes_key : bytes, hmac_key : bytes) 
         criptografar = Encrypt_DH.prepare_send_message_dh(body, aes, hmac)
+        '''
 
+        criptografar = body
         # Monta a mensagem
         message = MessageModel("message", self.model.username, self.target, criptografar)
 
@@ -76,23 +83,6 @@ class MessageController:
         ''' Thread que verifica atualizações no arquivo de chat '''
         last_modified = 0
         while self.running:
-
-            if not self.session_key:
-                session_key = SessionKeyService.verificar_session_key(self.target)
-                
-                # se existir, salva e continua
-                if session_key:
-                    print("tem session key")
-                    self.session_key = session_key
-                    print(self.session_key)
-                # se não tiver session key nem pub_key, pede pub_key da pessoa para iniciar DH
-                elif not self.peer_pub_key:
-                    print("verificando chave")
-                    self.peer_pub_key = SessionKeyService.verificar_rsa_pub_key(self.model.username ,self.target)
-                    print(self.peer_pub_key)
-                else:
-                    SessionKeyService.iniciar_DH(self.target)
-
             try:
                 current_modified = os.path.getmtime(self.diretorio) if os.path.exists(self.diretorio) else 0
                 if current_modified > last_modified:

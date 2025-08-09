@@ -10,8 +10,8 @@ class HalfKey:
     def jsonify(self):
         return {
             "usuario_alvo" : self.target,
-            "dh_private_key" : base64.b64encode(self.dh_private_key).decode('utf-8'),
-            "salt" : base64.b64encode(self.salt).decode('utf-8')
+            "dh_private_key" : base64.b64encode(self.dh_private_key),
+            "salt" : base64.b64encode(self.salt)
         }
     
     def save_half_key(self):

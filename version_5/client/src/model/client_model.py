@@ -64,7 +64,7 @@ class ClientModel:
             challenge = b64decode(challenge_b64)  # 3. Decodifica o desafio
 
             # 4. Carrega chave privada
-            private_key = Translate_Pem.receive_key(self.private_key)
+            private_key = Translate_Pem.pem_to_chave(self.private_key)
             print(private_key)
 
             # 5. Assina o desafio com a chave privada

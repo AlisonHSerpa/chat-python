@@ -25,7 +25,7 @@ class SessionKeyService:
         '''
         try:
             session = WriterService.get_session_key(target)
-            return session is not None and session.get("valid", False)
+            return session is not None
         except (FileNotFoundError, json.JSONDecodeError, ValueError, RuntimeError) as e:
             print(f"[verificar_session_key] Erro ao verificar sessão de '{target}': {e}")
             return False
@@ -61,7 +61,7 @@ class SessionKeyService:
     @staticmethod
     def iniciar_DH(target):
         from ..controller import SessionController2
-        SessionController2.enviar_um_request_dh(target, SessionKeyService.rsa_public_keys[target])
+        SessionController2.diffie_hellman_1(target, SessionKeyService.rsa_public_keys[target])
 
     @staticmethod
     def insert_rsa_public_key(target, rsa_pub_key):

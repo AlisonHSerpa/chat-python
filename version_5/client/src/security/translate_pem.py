@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives.asymmetric import dh
 class Translate_Pem:
 
     '''Esta classe é responsável por traduzir chaves entre o formato PEM e os objetos de 
-    chave usados pela biblioteca cryptography.
+    chave usados pela biblioteca cryptography [CHAVES RSA].
     '''
 
     '''Esta função é responsável por transformar a chave privada e pública 
@@ -38,7 +38,7 @@ class Translate_Pem:
     '''# O código abaixo recebe o conteúdo PEM (que já foi lido e inserido em uma variável)
     # e transforma de volta para uma chave privada ou pública. É o processo inverso da função acima.'''
     @staticmethod
-    def receive_key(pem_key):
+    def pem_to_chave(pem_key):
         # Se for string, converte para bytes
         if isinstance(pem_key, str):
             pem_key = pem_key.encode('utf-8')
