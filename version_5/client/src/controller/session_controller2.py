@@ -149,6 +149,7 @@ class SessionController2:
             '''
 
             # monta a mensagem e envia
+            print("DH 2 enviado")
             response = MessageModel("DH_2", origin, target, "", cript_temp_pub, "", aes_key_rsa, base64.b64encode(iv).decode("utf-8"))
             MailService.send_to_mailman(response.get_message())
             print("Mensagem resposta foi criada!")
@@ -163,6 +164,9 @@ class SessionController2:
         from ..model import SessionKey
         
         try:
+
+            print("tentando DH3")
+            
             user = WriterService.read_client()
             current_user = user["username"]
             

@@ -20,7 +20,7 @@ class MessageController:
         
         try:
             while True:
-                mensagem = client_socket.recv(4096)
+                mensagem = client_socket.recv(8096)
                 if not mensagem:
                     break
 

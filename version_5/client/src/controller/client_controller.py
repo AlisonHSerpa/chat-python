@@ -57,14 +57,14 @@ class ClientController:
                     A lógica atual irá receber os dados'''
                     print("tentando fazer session key")
                     SessionController2.diffie_hellman_2(message)
-                    print(message) 
 
                 elif (message["type"] == "DH_2"):
                     '''Esse método é chamado para receber APENAS a chave pública do remetente.'''
-                    print("public key resposta coletada")
+
+                    print("CHEGOU NO DH 3 FINALMENTE")
                     SessionController2.diffie_hellman_3(message)
-                    print(message)
-                
+                    
+
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
 
@@ -72,8 +72,6 @@ class ClientController:
                     # chama o sessionkeyservice para guardar
                     SessionKeyService.insert_rsa_public_key(message["from"], message["body"])
                     print("request feito")
-                elif (message["type"] == "error"):
-                    print(message)
 
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)
