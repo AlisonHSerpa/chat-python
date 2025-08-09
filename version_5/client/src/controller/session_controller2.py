@@ -150,7 +150,8 @@ class SessionController2:
 
             # monta a mensagem e envia
             print("DH 2 enviado")
-            response = MessageModel("DH_2", origin, target, "", cript_temp_pub, "", aes_key_rsa, base64.b64encode(iv).decode("utf-8"))
+            response = MessageModel("DH_2", origin, target, "", cript_temp_pub, "", aes_key_rsa, base64.b64encode(iv).decode("utf-8"),"")
+            #response = MessageModel("DH_2", origin, target, "CHEGOU")
             MailService.send_to_mailman(response.get_message())
             print("Mensagem resposta foi criada!")
             print(response.get_message())

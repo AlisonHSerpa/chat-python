@@ -33,6 +33,10 @@ class HalfKey:
     def get_data_in_bytes(data):
         """Converte os dados base64 de volta para bytes"""
         try:
+            # Se data vier como string JSON, converte para dict
+            if isinstance(data, str):
+                data = json.loads(data)
+
             pem_key = base64.b64decode(data["dh_private_key"])
             salt = base64.b64decode(data["salt"])
             
@@ -41,6 +45,8 @@ class HalfKey:
                 pem_key,
                 password=None
             )
+            
+            return private_key, salt
             
             return private_key, salt
         except Exception as e:
