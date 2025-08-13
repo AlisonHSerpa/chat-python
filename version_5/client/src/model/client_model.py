@@ -37,7 +37,10 @@ class ClientModel:
 
             else:
                 # As chaves são criadas a partir do método com RSA
-                self.private_key, self.public_key = Keygen.generate_rsa_keys()
+                private_key, public_key = DiffieHelmanHelper.rsa_generate()
+
+                self.private_key = Translate_Pem.chave_para_pem(private_key)
+                self.public_key = Translate_Pem.chave_para_pem(public_key)
                 self.local_key = 2
 
                 # cadastra no servidor

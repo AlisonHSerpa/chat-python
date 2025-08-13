@@ -4,7 +4,6 @@ import os
 from ..view import ChatView
 from ..service import *
 from ..model import *
-from ..security import Encrypt_DH
 import base64
 
 class MessageController:

@@ -38,14 +38,22 @@ class MailService:
         while MailService.running:
             try:
                 response = MailService.socket.recv(8096).decode()
+                
                 if not response:
                     break
-                try:
-                    mensagem = json.loads(response)
-                    MailService.mailbox.put(mensagem)
-                except json.JSONDecodeError:
-                    print("Erro ao decodificar mensagem JSON")
-                    break
+
+                respostas = response.split("\n")
+                for resposta in respostas:
+                    if len(resposta) == 0:
+                        continue
+                    
+                    try:
+                        mensagem = json.loads(resposta.strip())
+                        MailService.mailbox.put(mensagem)
+                    except json.JSONDecodeError as e:
+                        print(f"DEBUG ERRO: {resposta}")
+                        print(f"Erro ao decodificar mensagem JSON: {e}")
+                        break
             except Exception as e:
                 print(f'Erro ao escutar o servidor: {e}')                    
                 break
@@ -56,8 +64,8 @@ class MailService:
         while MailService.running:
             try:
                 mensagem = MailService.mailman.get(block=True)
-                MailService.socket.send(mensagem.encode())
-                print("enviado")
+                print(f"DEBUG ENVIADO: {mensagem}")
+                MailService.socket.sendall(f"{mensagem}\n".encode())
             except Exception as e:
                 print(f'Erro ao enviar mensagem: {e}')
                 break
