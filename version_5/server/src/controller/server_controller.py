@@ -16,6 +16,7 @@ class ServerController:
     def __init__(self):
         self.model = ServerModel()
         self.repository = Repository()
+        self.repository.generate_parameters()
         self.message_controller = MessageController(self, self.model, self.repository)
 
     def handle_new_connection(self, client_socket, client_address):
@@ -24,9 +25,9 @@ class ServerController:
             try:
                 # Recebe o handshake de username
                 data = client_socket.recv(1500).decode()
-
                 if not data.strip():  # string vazia ou só espaços
                     break
+
                 mensagem = json.loads(data)
 
                 cliente = None  # inicializa para evitar UnboundLocalError
@@ -41,6 +42,7 @@ class ServerController:
                     resultado = self.sign_up_client(mensagem, client_socket, client_address)
                     if isinstance(resultado, ClientModel):
                         self.model.clients.append(resultado)
+                        print("isinstance deu positivo")
                         return cliente  # cadastro feito com sucesso, sai do loop
                     # senão, apenas espera nova mensagem
 
@@ -94,19 +96,25 @@ class ServerController:
 
     def sign_up_client(self, mensagem, client_socket, client_address):
         print(f"{client_address} chegou a tentar fazer cadastro")
+
+        # procura para ver se o nome ja existe
         if not self.repository.get_client_by_username(mensagem["from"]) == None :
             response = MessageModel("erro","server",mensagem["from"],"username já existe")
             client_socket.sendall(response.get_message().encode())
             return False
 
+        # se nao existir, cria um
         dto = ClienteDTO(mensagem["from"], mensagem["body"])
         client_data = dto.make_json()  # agora retorna dicionário
         self.repository.insert_client(client_data)
 
-        response = MessageModel("autorized", "server", mensagem["from"], "")
+        # mensagem de autorizacao que envia os parametros
+        response = MessageModel("autorized", "server", mensagem["from"], self.repository.get_parameter())
         client_socket.sendall(response.get_message().encode())
 
+        # salva o cliente para o resto do programa
         cliente = ClientModel(mensagem["from"], client_socket, client_address, mensagem["body"])
+        # retorna o cliente, eh importante para o fluxo do codigo
         return cliente
 
     def connection_request_loop(self):

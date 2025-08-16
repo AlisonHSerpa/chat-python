@@ -16,7 +16,41 @@ class WriterService:
             if filepath not in WriterService._file_locks:
                 WriterService._file_locks[filepath] = threading.Lock()
             return WriterService._file_locks[filepath]
+        
+    @staticmethod
+    def insert_parameter(pem_parameter : str, diretorio = None):
+        if diretorio is None:
+            diretorio = WriterService.get_parameters_file_path()
+        
+        folder = os.path.dirname(diretorio)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
 
+        file_lock = WriterService._get_file_lock(diretorio)
+        with file_lock:
+            try:
+                with open(diretorio, "w", encoding='utf-8') as arquivo:
+                    arquivo.write(pem_parameter)
+            except Exception as e:
+                raise RuntimeError(f"[insert_parameter] Erro ao escrever parametro no arquivo: {e}")
+    
+    @staticmethod
+    def get_parameter(diretorio=None) -> str:
+        """Lê o parâmetro DH do arquivo e retorna como string."""
+        if diretorio is None:
+            diretorio = WriterService.get_parameters_file_path()
+
+        if not os.path.exists(diretorio):
+            raise FileNotFoundError(f"[get_parameter] Arquivo não encontrado: {diretorio}")
+
+        file_lock = WriterService._get_file_lock(diretorio)
+        with file_lock:
+            try:
+                with open(diretorio, "r", encoding='utf-8') as arquivo:
+                    return arquivo.read()
+            except Exception as e:
+                raise RuntimeError(f"[get_parameter] Erro ao ler parâmetro do arquivo: {e}")
+        
     @staticmethod
     def write_client(json_data=None, diretorio=None):
         ''' cria um arquivo user.txt para salvar dados do cliente atual'''
@@ -275,6 +309,10 @@ class WriterService:
     @staticmethod
     def get_user_file_path():
         return os.path.join(WriterService.DATA_DIR, "user.txt")
+    
+    @staticmethod
+    def get_parameters_file_path():
+        return os.path.join(WriterService.DATA_DIR, "parameters.txt")
     
     @staticmethod
     def get_session_file_path(target):

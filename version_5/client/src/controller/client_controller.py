@@ -118,7 +118,8 @@ class ClientController:
         MailService.disconnect()
         
         # disconnecta model
-        self.model.disconnect()
+        if self.model:
+            self.model.disconnect()
         
         # fecha o programa
         sys.exit(1)

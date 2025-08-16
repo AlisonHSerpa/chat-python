@@ -6,6 +6,7 @@ from base64 import b64encode, b64decode
 from ..service import *
 from .message_model import MessageModel
 
+
 class ClientModel:
     def __init__(self):
         self.connected = False
@@ -81,8 +82,10 @@ class ClientModel:
             # 7. Recebe a resposta do servidor
             print("Aguardando resposta do servidor...")
             result = MailService.socket.recv(1500).decode()
+                 
             if result == "OK":
                 print("Login aceito!")
+                # identifica como conectado
                 self.connected = True
             else:
                 self.connected = False
@@ -116,6 +119,9 @@ class ClientModel:
                 # escreve um user.txt
                 WriterService.write_client(self.jsonify())
                 print("cadastro realizado!")
+
+                # salva os parametros
+                WriterService.insert_parameter(message["body"])
                 self.connected = True
             elif message["type"] == "erro":
                 # tenta de novo

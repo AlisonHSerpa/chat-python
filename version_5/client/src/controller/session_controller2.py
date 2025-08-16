@@ -47,8 +47,6 @@ class SessionController2:
                 "aes": "",               # não usado aqui
                 "iv": envelope["n"],     # nonce
                 "public_key": public_key,
-                "date" : datetime.now().date().isoformat(),
-                "time" : datetime.now().strftime("%H:%M")
             }
             
             print("DH 1 enviado")
@@ -157,11 +155,7 @@ class SessionController2:
             aes_key, hmac_key = dhh.hkdf_derive(shared_secret, salt, b"chat-session")
             
             # Salva chaves de sessão
-            session_key = SessionKey(response["from"], aes_key, hmac_key)
-            
-            # Limpa half key
-            WriterService.insert_half_key(None, response["from"], modo="w")
-            
+            session_key = SessionKey(response["from"], aes_key, hmac_key)          
             print(f"Session key estabelecida com {response['from']}")
             
         except Exception as e:

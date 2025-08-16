@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.backends import default_backend
+from ..service import WriterService
 
 class DiffieHelmanHelper:
     # =========================================================
@@ -101,11 +102,13 @@ class DiffieHelmanHelper:
     # Diffie-Hellman (efêmero) + HKDF
     # =========================================================
     # Parâmetros DH globais (p, g). Gerados uma vez no servidor (ou fixos no sistema).
-    DH_PARAMETERS = dh.generate_parameters(generator=2, key_size=2048)
 
     @staticmethod
     def dh_generate():
-        priv = DiffieHelmanHelper.DH_PARAMETERS.generate_private_key()
+        pem_str = WriterService.get_parameter()
+        DH_PARAMETERS = serialization.load_pem_parameters(pem_str.encode('utf-8'))
+
+        priv = DH_PARAMETERS.generate_private_key()
         pub = priv.public_key()
         return priv, pub
 

@@ -2,6 +2,8 @@ from dotenv import load_dotenv, find_dotenv
 import os
 from pymongo import MongoClient
 from queue import Queue
+from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives import serialization
 
 load_dotenv(find_dotenv())
 
@@ -45,6 +47,7 @@ class Repository:
         self.db = self.client.chat
         self.clients = self.db.clients
         self.messages = self.db.messages
+        self.parameter = self.db.parameter
 
     '''metodos de insercao'''
     def insert_client(self, client):
@@ -102,6 +105,39 @@ class Repository:
     def delete_messages_to_client(self, username):
         self.messages.delete_many({"to": username})
 
+    def generate_parameters(self):
+        """Gera e salva parâmetros DH no MongoDB, caso ainda não existam."""
+        if self.parameter.count_documents({}) > 0:
+            print("Parâmetros já existem no banco, não será gerado novamente.")
+            return
+    
+        # cria o parametro como um DHParameter
+        DH_PARAMETERS = dh.generate_parameters(generator=2, key_size=2048)
+        
+        # transforma em bytes
+        PARAMETER = DH_PARAMETERS.parameter_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.ParameterFormat.PKCS3
+        )
+
+        # cria um json parametro
+        PARAM = {
+            "parametro" : PARAMETER.decode()
+        }
+
+        # salva o json
+        self.parameter.insert_one(PARAM)
+        print("Parâmetros DH gerados e salvos no banco.")
+
+    def get_parameter(self):
+        """Recupera os parâmetros DH do MongoDB e retorna como objeto DHParameters."""
+        doc = self.parameter.find_one(sort=[("_id", 1)])  # pega o mais antigo
+        if not doc:
+            raise ValueError("Nenhum parâmetro DH encontrado no banco.")
+
+        pem_params = doc["parametro"]  # Recupera como bytes
+        # dh_params = serialization.load_pem_parameters(bytes(pem_params)) EXEMPLO DE COMO CARREGAR O PARAMETRO DE VOLTA PARA OBJETO
+        return pem_params
 
 '''
 # TESTE COM JSONS SIMULADOS
