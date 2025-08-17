@@ -41,17 +41,10 @@ class MessageController:
         from ..security import Assinatura
 
         ''' pega o que foi digitado no label e envia para target dps coloca no txt '''
+        # pega o que foi digitado no label do view
         body = self.view.get_message_input()
         if not body:
             return
-        
-        '''
-        aes = base64.decode(self.session_key["aes_key"])
-        hmac = base64.decode(self.session_key["hmac_key"])
-
-        # Aqui cabe criptografar a mensagem (plaintext : str, aes_key : bytes, hmac_key : bytes) 
-        criptografar = Encrypt_DH.prepare_send_message_dh(body, aes, hmac)
-        '''
 
         # verifica se tem session key
         if SessionKeyService.verificar_session_key(self.target):

@@ -37,7 +37,7 @@ class MailService:
         '''Recebe todas as mensagens e coloca na mailbox'''
         while MailService.running:
             try:
-                response = MailService.socket.recv(8096).decode()
+                response = MailService.socket.recv(1500).decode()
                 
                 if not response:
                     break
