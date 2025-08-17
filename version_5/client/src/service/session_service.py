@@ -25,6 +25,7 @@ class SessionKeyService:
         '''
         try:
             session = WriterService.get_session_key(target)
+            print(f"DEBUG [VERFICAR_SESSION_KEY]: {session}")
             return session is not None
         except (FileNotFoundError, json.JSONDecodeError, ValueError, RuntimeError) as e:
             print(f"[verificar_session_key] Erro ao verificar sessão de '{target}': {e}")

@@ -56,7 +56,7 @@ class Repository:
         self.clients.insert_one(client)
 
     def insert_message(self, message):
-        required_fields = {"type", "from", "to", "body","key","param","aes","iv", "date", "time"}
+        required_fields = {"type", "from", "to", "body","key","aes","iv", "date", "time"}
         if not required_fields.issubset(message.keys()):
             raise ValueError("Mensagem incompleta")
         self.messages.insert_one(message)

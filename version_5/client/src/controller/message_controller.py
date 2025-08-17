@@ -18,9 +18,8 @@ class MessageController:
         self.peer_pub_key = SessionKeyService.verificar_rsa_pub_key(self.model.username ,self.target)
 
         print("verificando chave de sessao")
-        self.session_key = SessionKeyService.verificar_session_key(self.target)
-        if not self.session_key:
-            print("dh iniciado")
+        if not SessionKeyService.verificar_session_key(self.target):
+            print("DEBUG: não existe chave, iniciando DH")
             SessionKeyService.iniciar_DH(self.target)
 
         self._chat_lock = threading.Lock()
@@ -39,6 +38,8 @@ class MessageController:
         return self.view
 
     def send_message(self):
+        from ..security import Assinatura
+
         ''' pega o que foi digitado no label e envia para target dps coloca no txt '''
         body = self.view.get_message_input()
         if not body:
@@ -52,15 +53,13 @@ class MessageController:
         criptografar = Encrypt_DH.prepare_send_message_dh(body, aes, hmac)
         '''
 
-        criptografar = body
-        # Monta a mensagem
-        message = MessageModel("message", self.model.username, self.target, criptografar)
+        # verifica se tem session key
+        if SessionKeyService.verificar_session_key(self.target):
+            message = Assinatura.encrypt_and_send_message(body, self.target, self.model.username)
+            self.post_message(message.message)
+        # se não tiver, faz uma mensagem improvisada
 
-        # Envia a mensagem
-        MailService.send_to_mailman(message.get_message())
-
-        # Mostra no chat e salva
-        self.post_message(message.message)
+        # limpa a caixa de texto
         self.view.clear_message_input()
 
     def post_message(self, message):

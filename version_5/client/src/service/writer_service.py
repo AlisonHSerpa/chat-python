@@ -132,9 +132,9 @@ class WriterService:
                 return False
 
     @staticmethod
-    def get_session_key(username: str):
+    def get_session_key(target: str):
         '''Lê a session key do disco e retorna como string JSON'''
-        path = WriterService.get_session_file_path(username)
+        path = WriterService.get_session_file_path(target)
 
         if not os.path.exists(path):
             return None

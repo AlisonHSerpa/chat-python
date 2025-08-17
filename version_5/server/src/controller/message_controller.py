@@ -45,21 +45,14 @@ class MessageController:
         finally:
             self.model.remove_client(client_socket)
             client_socket.close()
-
-
     
     ''' handlers '''
     def handle_message(self, json_data):
         """Envia mensagem para o cliente"""
-        print("chegou ate o handle")
+        print("chegou ate o handle message")
 
         target = json_data.get("to")
         origin = json_data.get("from")
-
-        # verifica se os dois existem no banco de dados
-        if not self.find_both_clients(origin, target):
-            print("verificaçao falhou")
-            return
 
         # procura o destino
         destiny_client = None

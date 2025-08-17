@@ -48,7 +48,7 @@ class ClientController:
                 if (message["type"] == "message"):
                     # desencripta e depois salva a mensagem
                     #Encrypt_DH.recebe_ciphertext(message["body"], message["from"])
-                    WriterService.save_message(message)
+                    Assinatura.receive_and_decrypt_message(message)
 
                 elif (message["type"] == "DH_1"): 
                     '''Esse método é chamado para receber a chave pública do 
