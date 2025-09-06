@@ -2,8 +2,6 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
 class Assinatura:
-
-    aphabet_cesar_cipher = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
     
     # Esta classe é responsável por assinar digitalmente mensagens usando RSA, ou checar a assinatura de mensagens.
     @staticmethod
@@ -20,35 +18,7 @@ class Assinatura:
         )
         return signature
 
-    @staticmethod
-    def decrypt_cesar (chave, cipherText):
-        n = len(Assinatura.aphabet_cesar_cipher)
-        plainText = ""
-
-        for i in range(len(cipherText)):
-            letra = cipherText[i]
-            gt = Assinatura.search_alphabet(letra, Assinatura.aphabet_cesar_cipher)
-            plainText += Assinatura.aphabet_cesar_cipher[(gt - chave) % n]
-
-        print("texto descriptografado com a chave " + str(chave) + " : " + plainText)
-
-    @staticmethod
-    def encrypt_cesar (chave, plainText):
-        n = len(Assinatura.aphabet_cesar_cipher)
-        cipherText = ""
-
-        for i in range(len(plainText)):
-            letra = plainText[i]
-            gt = Assinatura.search_alphabet(letra, Assinatura.aphabet_cesar_cipher)
-            cipherText += Assinatura.aphabet_cesar_cipher[(gt + chave) % n]
-
-        print("texto criptografado com a chave " + str(chave) + " : " + cipherText)
-    
-    @staticmethod 
-    def search_alphabet(letra):
-        for i in range(len(Assinatura.aphabet_cesar_cipher)):
-            if Assinatura.aphabet_cesar_cipher[i] == letra:
-                return i
+# ------------------------------------------------------------------------
 
     @staticmethod
     def _encrypt_message_aes_hmac(message: str, aes_key: bytes, hmac_key: bytes) -> bytes:
@@ -141,6 +111,7 @@ class Assinatura:
         message.message["body"] = plaintext
         return message
 
+    @staticmethod
     def receive_and_decrypt_message(message : dict):
         from ..security import DiffieHelmanHelper as dhh
         from ..service import WriterService
@@ -154,5 +125,101 @@ class Assinatura:
         hmac_key = base64.b64decode(session_key["hmac_key"])
 
         message["body"] = Assinatura._decrypt_message_aes_hmac(ciphertext, aes_key, hmac_key)
+        Assinatura._verify_time_message_session(session_key, message)
 
         WriterService.save_message(message)
+
+        
+    @staticmethod
+    def _verify_time_message_session(session_key : dict, message : dict):
+        from datetime import datetime
+        from ..service import SessionKeyService, WriterService
+
+        dt_session = datetime.now().fromisoformat(session_key["datetime"])
+        dt_message = datetime.now().fromisoformat(message["datetime"])
+
+        delta = dt_session - dt_message
+
+        if delta.total_seconds() >= 3600:
+            WriterService.delete_session_key(message["origin"])
+            SessionKeyService.iniciar_DH(message["origin"])
+
+# ----------------------------------------------------------------
+    @staticmethod
+    def send_improvised_message(plaintext : str, target: str, username : str):
+        from ..model import MessageModel
+        from ..service import MailService
+
+        '''
+            message = {
+            "type" : type,
+            "from" : origin,
+            "to" : destiny,
+            "body" : body
+        '''
+        ciphertext = Assinatura._encrypt_cesar(7, plaintext)
+
+        # Monta a mensagem
+        message = MessageModel("message_improvised", username, target, ciphertext)
+
+        # Envia a mensagem
+        MailService.send_to_mailman(message.get_message())
+        message.message["body"] = plaintext
+        return message
+
+    @staticmethod
+    def receive_improvised_message(message : dict):
+        from ..service import WriterService
+
+        '''
+            message = {
+            "type" : type,
+            "from" : origin,
+            "to" : destiny,
+            "body" : body
+        '''
+        message["body"] = Assinatura._decrypt_cesar(7, message["body"])
+        WriterService.save_message(message)
+
+# -------------------------------------------------------
+    aphabet_cesar_cipher = (
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz"
+            "0123456789"
+            " !@#$%^&*()-_=+[]{};:'\",.<>?/\\|`~"
+        )
+
+    @staticmethod
+    def _search_alphabet(letra):
+        """Retorna o índice da letra no alfabeto, ou None se não estiver."""
+        if letra in Assinatura.aphabet_cesar_cipher:
+            return Assinatura.aphabet_cesar_cipher.index(letra)
+        return None
+
+    @staticmethod
+    def _encrypt_cesar(chave, plainText):
+        n = len(Assinatura.aphabet_cesar_cipher)
+        cipherText = ""
+
+        for letra in plainText:
+            gt = Assinatura._search_alphabet(letra)
+            if gt is not None:
+                cipherText += Assinatura.aphabet_cesar_cipher[(gt + chave) % n]
+            else:
+                cipherText += letra  # mantém caracteres fora do alfabeto
+
+        return cipherText
+
+    @staticmethod
+    def _decrypt_cesar(chave, cipherText):
+        n = len(Assinatura.aphabet_cesar_cipher)
+        plainText = ""
+
+        for letra in cipherText:
+            gt = Assinatura._search_alphabet(letra)
+            if gt is not None:
+                plainText += Assinatura.aphabet_cesar_cipher[(gt - chave) % n]
+            else:
+                plainText += letra  # mantém caracteres fora do alfabeto
+
+        return plainText

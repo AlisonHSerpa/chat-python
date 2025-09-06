@@ -20,7 +20,7 @@ class MessageController:
         
         try:
             while True:
-                mensagem = client_socket.recv(1500)
+                mensagem = client_socket.recv(3600).decode().strip()
                 if not mensagem:
                     break
 
@@ -121,10 +121,11 @@ class MessageController:
         # pega a key do target
         target_client = self.repository.get_client_by_username(target)
         target_key = target_client["key"]
+        print(target_key)
 
         # monta a mensagem
         response = MessageModel("request_key", target, origin, target_key)
-        print(response)
+        print(response.get_message())
 
         # envia se a origem estiver onlinde
         for client in self.model.clients:
@@ -169,18 +170,13 @@ class MessageController:
         origem = json_data.get("from")
         destino = json_data.get("to")
         corpo = json_data.get("body")
-        key = json_data.get("key")
-        param = json_data.get("param")
-        aes = json_data.get("aes")
-        iv = json_data.get("iv")
-        date = json_data.get("date")
-        time = json_data.get("time")
         
 
         print("chegou no servidor")
         handlers = {
             "changeusername": lambda: self.handle_username(origem, corpo) if destino == "server" else None,
             "message": lambda: self.handle_message(json_data),
+            "message_improvised": lambda: self.handle_message(json_data),
             "DH_1": lambda: self.handle_dh(json_data),
             "DH_2": lambda: self.handle_dh(json_data),
             "request_key": lambda: self.handle_request(origem, destino)

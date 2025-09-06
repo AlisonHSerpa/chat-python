@@ -51,6 +51,9 @@ class MessageController:
             message = Assinatura.encrypt_and_send_message(body, self.target, self.model.username)
             self.post_message(message.message)
         # se não tiver, faz uma mensagem improvisada
+        #else:
+            message = Assinatura.send_improvised_message(body, self.target, self.model.username)
+            self.post_message(message.message)
 
         # limpa a caixa de texto
         self.view.clear_message_input()

@@ -13,8 +13,7 @@ class MessageModel:
             "param" : param,
             "aes" : aes,
             "iv" : iv ,
-            "date" : now.date().isoformat(),
-            "time" : now.strftime("%H:%M")
+            "datetime" : datetime.now().isoformat(timespec="minutes")
         }
 
     def get_message(self):

@@ -63,7 +63,6 @@ class ClientController:
 
                     print("CHEGOU NO DH 3 FINALMENTE")
                     SessionController2.diffie_hellman_3(message)
-                    
 
                 elif (message["type"] == "userlist"):
                     self.set_online_users(message["body"])
@@ -72,6 +71,9 @@ class ClientController:
                     # chama o sessionkeyservice para guardar
                     SessionKeyService.insert_rsa_public_key(message["from"], message["body"])
                     print("request feito")
+
+                elif (message["type"] == "message_improvised"):
+                    Assinatura.receive_improvised_message(message)
 
         # Agenda o próximo processamento
         self.view.after(100, self.process_messages)
@@ -120,9 +122,6 @@ class ClientController:
         # disconnecta model
         if self.model:
             self.model.disconnect()
-        
-        # fecha o programa
-        sys.exit(1)
 
     def run(self):
         """Inicia a aplicação"""

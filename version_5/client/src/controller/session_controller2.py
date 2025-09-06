@@ -47,6 +47,7 @@ class SessionController2:
                 "aes": "",               # não usado aqui
                 "iv": envelope["n"],     # nonce
                 "public_key": public_key,
+                "datetime": datetime.now().isoformat(timespec="minutes")
             }
             
             print("DH 1 enviado")
@@ -104,7 +105,8 @@ class SessionController2:
                 "key": envelope_resp["k"],
                 "aes": dhh.b64e(aes_key),
                 "iv": envelope_resp["n"],
-                "public_key": user["public_key"]
+                "public_key": user["public_key"],
+                "datetime": datetime.now().isoformat(timespec="minutes")
             }
             
             # Salva chaves de sessão localmente

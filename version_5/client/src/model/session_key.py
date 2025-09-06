@@ -17,7 +17,7 @@ class SessionKey:
             "target" : self.target,
             "aes_key": self.aes,
             "hmac_key": self.hmac,
-            "creation_time": datetime.now().strftime("%H:%M"),
+            "datetime": datetime.now().isoformat(timespec="minutes")
         })
 
     def save_session_key(self):

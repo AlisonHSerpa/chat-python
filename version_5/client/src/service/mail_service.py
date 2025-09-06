@@ -37,7 +37,7 @@ class MailService:
         '''Recebe todas as mensagens e coloca na mailbox'''
         while MailService.running:
             try:
-                response = MailService.socket.recv(1500).decode()
+                response = MailService.socket.recv(3600).decode()
                 
                 if not response:
                     break
@@ -83,7 +83,16 @@ class MailService:
     
     @staticmethod
     def disconnect():
-        MailService.socket.close()
+        """Fecha o socket de forma segura"""
+        if MailService.socket:
+            try:
+                MailService.socket.shutdown(socket.SHUT_RDWR)
+            except (OSError, AttributeError):
+                # Socket já fechado ou em estado inválido
+                pass
+            finally:
+                MailService.socket.close()
+                MailService.socket = None
 
     @staticmethod
     def stop():

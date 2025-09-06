@@ -56,5 +56,5 @@ class ServerModel:
 
     def receive_data_server(self, data):
         '''decodifica json '''
-        json_data = json.loads(data.decode())
+        json_data = json.loads(data)
         return json_data

@@ -16,6 +16,8 @@ class WriterService:
             if filepath not in WriterService._file_locks:
                 WriterService._file_locks[filepath] = threading.Lock()
             return WriterService._file_locks[filepath]
+
+# ---------------------------------------------------------------------------------
         
     @staticmethod
     def insert_parameter(pem_parameter : str, diretorio = None):
@@ -50,6 +52,8 @@ class WriterService:
                     return arquivo.read()
             except Exception as e:
                 raise RuntimeError(f"[get_parameter] Erro ao ler parâmetro do arquivo: {e}")
+            
+# ----------------------------------------------------------------------------------
         
     @staticmethod
     def write_client(json_data=None, diretorio=None):
@@ -102,6 +106,7 @@ class WriterService:
             except Exception as e:
                 raise RuntimeError(f"[read_client] Erro ao ler arquivo JSON: {e}")
 
+# --------------------------------------------------------------------
 
     @staticmethod
     def insert_session_key(json_session_key: str, username: str, path_file=None, modo='w'):
@@ -148,6 +153,26 @@ class WriterService:
             except Exception as e:
                 print(f"[get_session_key] Erro: {e}")
                 return None
+            
+    @staticmethod
+    def delete_session_key(username: str):
+        """Remove o arquivo de session key do disco"""
+        path = WriterService.get_session_file_path(username)
+
+        if not os.path.exists(path):
+            return False  # não existe nada para apagar
+
+        file_lock = WriterService._get_file_lock(path)
+
+        with file_lock:
+            try:
+                os.remove(path)
+                return True
+            except Exception as e:
+                print(f"[delete_session_key] Erro ao deletar arquivo: {e}")
+                return False
+            
+## -------------------------------------------------------------------------------------
             
     @staticmethod
     def insert_half_key(half_key_data, username: str, path_file=None, modo='w'):
@@ -199,6 +224,8 @@ class WriterService:
             except Exception as e:
                 print(f"[get_half_key] Erro: {e}")
                 return None
+            
+# ----------------------------------------------------------------------------
 
     @staticmethod
     def read_chat_history(path_file, default_content=""):
@@ -245,6 +272,7 @@ class WriterService:
 
     @staticmethod
     def save_message(json_message):
+        from datetime import datetime
         ''' Salva uma mensagem recebida no arquivo do remetente '''
         if isinstance(json_message, str):
             try:
@@ -257,22 +285,22 @@ class WriterService:
             print("[save_message] json_message não é um dicionário")
             return False
 
-        required_keys = {"type", "from", "to", "body", "date", "time"}
+        required_keys = {"type", "from", "to", "body", "datetime"}
         if not required_keys.issubset(json_message.keys()):
             print("[save_message] json_message está faltando campos obrigatórios")
             return False
 
         sender = str(json_message["from"])
         body = str(json_message["body"])
-        date = str(json_message["date"])
-        time = str(json_message["time"])
+        datatempo = datetime.fromisoformat(str(json_message["datetime"]))
 
         filename = os.path.join(WriterService.DATA_DIR, "chats", f"{sender}.txt")
-        line = f"[{date} - {time}] {sender} : {body}"
+        line = f"[{datatempo}] {sender} : {body}"
         return WriterService._add_line(filename, line)
 
     @staticmethod
     def save_own_message(json_message):
+        from datetime import datetime
         ''' Salva uma mensagem enviada no arquivo do destinatário '''
         if isinstance(json_message, str):
             try:
@@ -285,7 +313,7 @@ class WriterService:
             print("[save_own_message] json_message não é um dicionário")
             return False
 
-        required_keys = {"type", "from", "to", "body", "date", "time"}
+        required_keys = {"type", "from", "to", "body", "datetime"}
         if not required_keys.issubset(json_message.keys()):
             print("[save_own_message] json_message está faltando campos obrigatórios")
             print(json_message)
@@ -294,12 +322,13 @@ class WriterService:
         sender = str(json_message["from"])
         target = str(json_message["to"])
         body = str(json_message["body"])
-        date = str(json_message["date"])
-        time = str(json_message["time"])
+        datatempo = datetime.fromisoformat(str(json_message["datetime"]))
 
         filename = os.path.join(WriterService.DATA_DIR, "chats", f"{target}.txt")
-        line = f"[{date} - {time}] {sender} : {body}"
+        line = f"[{datatempo}] {sender} : {body}"
         return WriterService._add_line(filename, line)
+    
+# ------------------------------------------------------------------------------
 
     ''' metodos para navegacao de path'''
     @staticmethod
